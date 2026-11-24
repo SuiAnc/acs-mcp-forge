@@ -20,7 +20,9 @@ package com.tom.rv2ide.utils
 import com.blankj.utilcode.util.ResourceUtils
 import com.tom.rv2ide.app.IDEApplication
 import com.tom.rv2ide.templates.RecipeExecutor
+import com.tom.rv2ide.templates.base.MissingIdeAssetException
 import java.io.File
+import java.io.FileNotFoundException
 import java.io.InputStream
 
 /**
@@ -45,6 +47,10 @@ class TemplateRecipeExecutor : RecipeExecutor {
   override fun openAsset(path: String): InputStream {
     try {
       return application.assets.open(path)
+    } catch (e: FileNotFoundException) {
+      // Report a missing IDE asset as a dedicated exception so that callers (the MCP tools) can
+      // return an actionable message instead of an opaque stack trace.
+      throw MissingIdeAssetException(path)
     } catch (e: Exception) {
       throw RuntimeException(e)
     }

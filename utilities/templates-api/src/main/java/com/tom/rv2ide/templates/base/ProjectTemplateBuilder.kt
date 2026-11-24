@@ -171,8 +171,11 @@ class ProjectTemplateBuilder :
           val gradlew = File(data.projectDir, "gradlew")
           val gradlewBat = File(data.projectDir, "${gradlew.name}.bat")
 
-          check(gradlew.exists()) { "'$gradlew' does not exist!" }
-          check(gradlewBat.exists()) { "'$gradlew' does not exist!" }
+          if (!gradlew.exists() || !gradlewBat.exists()) {
+            // The archive was opened successfully but does not contain the expected entries, which
+            // means the packaged asset itself is broken.
+            throw MissingIdeAssetException(ToolsManager.getCommonAsset("gradle-wrapper.zip"))
+          }
 
           gradlew.setExecutable(true)
           gradlewBat.setExecutable(true)

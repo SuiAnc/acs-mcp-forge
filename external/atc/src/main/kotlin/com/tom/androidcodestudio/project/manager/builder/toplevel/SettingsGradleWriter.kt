@@ -202,6 +202,10 @@ object RepositoryPresets {
   val STANDARD_GROOVY =
       """
           repositories {
+              // repo.maven.apache.org is unreachable on some mobile networks, so the official
+              // Maven Central alias and Google's Central mirror are tried first.
+              maven { url 'https://repo1.maven.org/maven2' }
+              maven { url 'https://maven-central.storage-download.googleapis.com/maven2' }
               google()
               mavenCentral()
               gradlePluginPortal()
@@ -213,6 +217,10 @@ object RepositoryPresets {
   val STANDARD_KTS =
       """
           repositories {
+              // repo.maven.apache.org is unreachable on some mobile networks, so the official
+              // Maven Central alias and Google's Central mirror are tried first.
+              maven { url = uri("https://repo1.maven.org/maven2") }
+              maven { url = uri("https://maven-central.storage-download.googleapis.com/maven2") }
               google()
               mavenCentral()
               gradlePluginPortal()
@@ -225,6 +233,8 @@ object RepositoryPresets {
       """
           repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
           repositories {
+              maven { url 'https://repo1.maven.org/maven2' }
+              maven { url 'https://maven-central.storage-download.googleapis.com/maven2' }
               google()
               mavenCentral()
           }
@@ -236,6 +246,8 @@ object RepositoryPresets {
       """
           repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
           repositories {
+              maven { url = uri("https://repo1.maven.org/maven2") }
+              maven { url = uri("https://maven-central.storage-download.googleapis.com/maven2") }
               google()
               mavenCentral()
           }

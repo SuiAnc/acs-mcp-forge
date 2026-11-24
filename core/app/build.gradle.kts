@@ -87,6 +87,21 @@ android {
           keyAlias = "androidcs"
           keyPassword = signing_keyPassword
       }
+
+      // Optional local signing configuration. The repository keystore is not available on every
+      // machine, so a local debug keystore can be supplied with:
+      //   -PlocalDebugKeystore=/path/to/debug.jks -PlocalDebugStorePassword=... \
+      //   -PlocalDebugKeyAlias=... -PlocalDebugKeyPassword=...
+      create("localDebug") {
+          val keystorePath = project.findProperty("localDebugKeystore") as String?
+          if (keystorePath != null) {
+              storeFile = file(keystorePath)
+              storePassword = (project.findProperty("localDebugStorePassword") as String?) ?: ""
+              keyAlias =
+                  (project.findProperty("localDebugKeyAlias") as String?) ?: "androiddebugkey"
+              keyPassword = (project.findProperty("localDebugKeyPassword") as String?) ?: ""
+          }
+      }
   }
 
   androidResources { generateLocaleConfig = true }
@@ -98,7 +113,10 @@ android {
 
   buildTypes {
     debug {
-      signingConfig = signingConfigs.getByName("custom")
+      signingConfig =
+          signingConfigs.getByName(
+              if (project.hasProperty("localDebugKeystore")) "localDebug" else "custom"
+          )
     }
 
     release {

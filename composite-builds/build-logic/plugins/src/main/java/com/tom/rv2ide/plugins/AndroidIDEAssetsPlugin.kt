@@ -24,6 +24,7 @@ import com.tom.rv2ide.build.config.downloadVersion
 import com.tom.rv2ide.plugins.tasks.AddAndroidJarToAssetsTask
 import com.tom.rv2ide.plugins.tasks.AddFileToAssetsTask
 import com.tom.rv2ide.plugins.tasks.GenerateInitScriptTask
+import com.tom.rv2ide.plugins.tasks.PackageGradleWrapperTask
 // import com.tom.rv2ide.plugins.tasks.GradleWrapperGeneratorTask
 import com.tom.rv2ide.plugins.util.SdkUtils.getAndroidJar
 import org.gradle.api.Plugin
@@ -52,8 +53,21 @@ class AndroidIDEAssetsPlugin : Plugin<Project> {
             androidJar = androidComponentsExtension.getAndroidJar(assertExists = true)
           }
 
+      // Packages the Gradle wrapper so that project templates can find it at
+      // assets/data/common/gradle-wrapper.zip (see ToolsManager.getCommonAsset).
+      val repositoryRoot = rootProject.projectDir
+      val packageGradleWrapperTaskProvider =
+          tasks.register("packageGradleWrapper", PackageGradleWrapperTask::class.java) {
+            projectRoot = repositoryRoot
+          }
+
       androidComponentsExtension.onVariants { variant ->
         val variantNameCapitalized = variant.name.replaceFirstChar { it.uppercase() }
+
+        variant.sources.assets?.addGeneratedSourceDirectory(
+            packageGradleWrapperTaskProvider,
+            PackageGradleWrapperTask::outputDirectory,
+        )
         
         // variant.sources.jniLibs?.addGeneratedSourceDirectory(setupAapt2TaskTaskProvider,
         // SetupAapt2Task::outputDirectory)

@@ -23,6 +23,10 @@ internal fun ProjectTemplateBuilder.settingsGradleSrcStr(): String {
   return """
 pluginManagement {
   repositories {
+    // repo.maven.apache.org is unreachable on some mobile networks, so the official Maven
+    // Central alias and Google's Central mirror are tried first.
+    maven { url = uri("https://repo1.maven.org/maven2") }
+    maven { url = uri("https://maven-central.storage-download.googleapis.com/maven2") }
     gradlePluginPortal()
     google()
     mavenCentral()
@@ -32,6 +36,8 @@ pluginManagement {
 dependencyResolutionManagement {
   repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
   repositories {
+    maven { url = uri("https://repo1.maven.org/maven2") }
+    maven { url = uri("https://maven-central.storage-download.googleapis.com/maven2") }
     google()
     mavenCentral()
   }

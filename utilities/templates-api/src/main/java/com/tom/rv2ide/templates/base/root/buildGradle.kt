@@ -32,7 +32,7 @@ internal fun ProjectTemplateBuilder.buildGradleSrcKts(hasCompose: Boolean = fals
     }
 
     tasks.register<Delete>("clean") {
-        delete(rootProject.buildDir)
+        delete(rootProject.layout.buildDirectory)
     }
   """
       .trimIndent()
@@ -48,7 +48,7 @@ internal fun ProjectTemplateBuilder.buildGradleSrcGroovy(hasCompose: Boolean = f
     }
 
     task clean(type: Delete) {
-        delete rootProject.buildDir
+        delete rootProject.layout.buildDirectory
     }
   """
       .trimIndent()
