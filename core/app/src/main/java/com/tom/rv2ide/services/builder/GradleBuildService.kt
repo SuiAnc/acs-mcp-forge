@@ -64,8 +64,9 @@ import java.io.IOException
 import java.io.InputStream
 import java.util.Objects
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.CompletionException
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -100,6 +101,69 @@ class GradleBuildService :
   private var eventListener: EventListener? = null
   private var isReleaseVariant = false
 
+  /**
+   * Rolling buffer of the most recent build output lines.
+   *
+   * The MCP server (see `com.tom.rv2ide.mcp`) reads this snapshot instead of registering an
+   * [EventListener], because the service only keeps a single listener which belongs to the editor.
+   */
+  private val buildLogBuffer = ArrayDeque<String>()
+
+  /**
+   * Rolling buffer of tooling progress events. They are kept out of [buildLogBuffer] because the
+   * event objects only stringify to `...TaskStartEvent@1a2b3c`, which is useless in build logs.
+   */
+  private val buildEventBuffer = ArrayDeque<String>()
+  private val buildLogLock = Any()
+
+  /** Set when a cancellation request has been enqueued for the running build. */
+  @Volatile private var buildCancelRequested = false
+
+  @Volatile private var buildState: String = STATE_IDLE
+  @Volatile private var buildTaskNames: List<String> = emptyList()
+  @Volatile private var buildStartedAt: Long = 0L
+  @Volatile private var buildFinishedAt: Long = 0L
+
+  /**
+   * Sequence used to name builds which were started by the IDE itself (for example the automatic
+   * sync after a project is opened) and therefore do not have an id assigned by the MCP server.
+   */
+  private val buildIdSequence = AtomicInteger(0)
+
+  /** Id of the build which is running now, or of the last one which ran. */
+  @Volatile internal var activeBuildId: String? = null
+    private set
+
+  /** Who started [activeBuildId]: [ORIGIN_USER], [ORIGIN_SYNC], [ORIGIN_LINT] or [ORIGIN_TOOLING]. */
+  @Volatile internal var activeBuildOrigin: String = ORIGIN_UNKNOWN
+    private set
+
+  /** Id registered by the MCP server for the build it is about to start. */
+  @Volatile private var pendingBuildId: String? = null
+  @Volatile private var pendingBuildOrigin: String = ORIGIN_UNKNOWN
+
+  /**
+   * Ownership of the build slot.
+   *
+   * The slot belongs to exactly one build at a time. A rejected attempt (a build started while
+   * another one is running) must never clear the state of the owner: doing so used to make a
+   * running build look idle, which in turn produced `state=running` together with
+   * `inProgress=false`, an uncancellable build and a build service that never recovered.
+   */
+  private val slotLock = Any()
+  private val slotCounter = AtomicLong(0)
+
+  @Volatile private var slotOwner: Long? = null
+
+  /** Directory of the project the active build belongs to. */
+  @Volatile internal var activeBuildPath: String = ""
+
+  /** Human readable reason for the last failure (if any). */
+  @Volatile internal var buildReason: String? = null
+
+  /** Set when the tooling connection failed; cleared by the next successful build. */
+  @Volatile internal var hasFatalFailure: Boolean = false
+
   private val buildServiceScope =
       CoroutineScope(Dispatchers.Default + CoroutineName("GradleBuildService"))
 
@@ -126,6 +190,30 @@ class GradleBuildService :
 
     private val log = LoggerFactory.getLogger(GradleBuildService::class.java)
     private val NOTIFICATION_ID = R.string.app_name
+
+    /** Maximum number of build output lines kept in memory for the MCP server. */
+    internal const val BUILD_LOG_LIMIT = 2000
+
+    internal const val STATE_IDLE = "idle"
+    internal const val STATE_RUNNING = "running"
+    internal const val STATE_SUCCEEDED = "succeeded"
+    internal const val STATE_FAILED = "failed"
+
+    internal const val STATE_CANCELLED = "cancelled"
+
+    /** A build which is still `running` after this delay is reported (and closed) as failed. */
+    internal const val STALE_BUILD_TIMEOUT_MS = 300_000L
+
+    /** Build origins reported to the MCP server. */
+    internal const val ORIGIN_USER = "user"
+
+    internal const val ORIGIN_SYNC = "sync"
+    internal const val ORIGIN_LINT = "lint"
+    internal const val ORIGIN_TOOLING = "tooling"
+    internal const val ORIGIN_UNKNOWN = "unknown"
+
+    /** Maximum number of tooling events kept for `build_logs(verbose=true)`. */
+    internal const val BUILD_EVENT_LIMIT = 500
     private val SERVER_System_err = LoggerFactory.getLogger("ToolingApiErrorStream")
   }
 
@@ -337,6 +425,7 @@ class GradleBuildService :
   }
 
   override fun logMessage(params: LogMessageParams) {
+    appendBuildLog("[${params.level}] ${params.message}")
     val logger = LoggerFactory.getLogger(params.tag)
     when (params.level) {
       'D' -> logger.debug(params.message)
@@ -349,27 +438,149 @@ class GradleBuildService :
   }
 
   override fun logOutput(line: String) {
+    appendBuildLog(line)
     eventListener?.onOutput(line)
   }
 
+  /**
+   * Registers the id and origin of the build which is about to start.
+   *
+   * Must be called before [executeTasks] so that [prepareBuild] uses the id assigned by the MCP
+   * server instead of generating an IDE (sync) id.
+   */
+  internal fun beginBuild(id: String, origin: String, projectPath: String = "") {
+    pendingBuildId = id
+    pendingBuildOrigin = origin
+    if (projectPath.isNotBlank()) {
+      activeBuildPath = projectPath
+    }
+  }
+
   override fun prepareBuild(buildInfo: BuildInfo) {
+    // Every build gets an addressable id, including the automatic sync builds started by the IDE.
+    // Without this, the MCP tools had nothing to report while a sync build was running.
+    val registered = pendingBuildId
+    activeBuildId = registered ?: "sync-${buildIdSequence.incrementAndGet()}"
+    activeBuildOrigin = if (registered != null) pendingBuildOrigin else ORIGIN_SYNC
+    pendingBuildId = null
+    pendingBuildOrigin = ORIGIN_UNKNOWN
+
+    buildState = STATE_RUNNING
+    buildStartedAt = System.currentTimeMillis()
+    buildFinishedAt = 0L
+    buildReason = null
+    buildTaskNames = buildInfo.tasks
+    buildCancelRequested = false
+    appendBuildLog("> Preparing build: ${buildInfo.tasks.joinToString(" ")}")
     updateNotification(getString(R.string.build_status_in_progress), true)
     eventListener?.prepareBuild(buildInfo)
   }
 
   override fun onBuildSuccessful(result: BuildResult) {
+    buildState = STATE_SUCCEEDED
+    buildFinishedAt = System.currentTimeMillis()
+    buildTaskNames = result.tasks.filterNotNull()
+    appendBuildLog("> Build finished successfully: ${result.tasks.joinToString(" ")}")
     updateNotification(getString(R.string.build_status_sucess), false)
     eventListener?.onBuildSuccessful(result.tasks)
   }
 
   override fun onBuildFailed(result: BuildResult) {
+    val cancelled = buildCancelRequested
+    buildState = if (cancelled) STATE_CANCELLED else STATE_FAILED
+    buildFinishedAt = System.currentTimeMillis()
+    buildTaskNames = result.tasks.filterNotNull()
+    appendBuildLog(
+        if (cancelled) {
+          "> Build cancelled: ${result.tasks.joinToString(" ")}"
+        } else {
+          "> Build failed: ${result.tasks.joinToString(" ")}"
+        }
+    )
+    buildCancelRequested = false
     updateNotification(getString(R.string.build_status_failed), false)
     eventListener?.onBuildFailed(result.tasks)
   }
 
   override fun onProgressEvent(event: ProgressEvent) {
+    appendBuildEvent(event.displayName)
     eventListener?.onProgressEvent(event)
   }
+
+  /** Appends a line to the rolling build log buffer. */
+  internal fun appendBuildLog(line: String) {
+    val text = line.trimEnd()
+    if (text.isEmpty()) return
+    synchronized(buildLogLock) {
+      buildLogBuffer.addLast(text)
+      while (buildLogBuffer.size > BUILD_LOG_LIMIT) {
+        buildLogBuffer.removeFirst()
+      }
+    }
+  }
+
+  /** Appends a tooling event description to the event buffer. */
+  internal fun appendBuildEvent(displayName: String) {
+    val text = displayName.trim()
+    if (text.isEmpty()) return
+    synchronized(buildLogLock) {
+      buildEventBuffer.addLast(text)
+      while (buildEventBuffer.size > BUILD_EVENT_LIMIT) {
+        buildEventBuffer.removeFirst()
+      }
+    }
+  }
+
+  /** Returns a snapshot of the last [tail] tooling events. */
+  internal fun buildEventSnapshot(tail: Int): List<String> {
+    return synchronized(buildLogLock) {
+      val snapshot = buildEventBuffer.toList()
+      if (tail <= 0) snapshot else snapshot.takeLast(tail)
+    }
+  }
+
+  /** Returns a snapshot of the last [tail] build log lines. */
+  internal fun buildLogSnapshot(tail: Int): List<String> {
+    return synchronized(buildLogLock) {
+      val snapshot = buildLogBuffer.toList()
+      if (tail <= 0) snapshot else snapshot.takeLast(tail)
+    }
+  }
+
+  /** Returns a snapshot of the current build state. */
+  internal fun buildStateSnapshot(): BuildStateSnapshot {
+    val startedAt = buildStartedAt
+    if (buildState == STATE_RUNNING &&
+        startedAt > 0L &&
+        System.currentTimeMillis() - startedAt > STALE_BUILD_TIMEOUT_MS) {
+      failStaleBuild("sync timeout")
+    }
+
+    return BuildStateSnapshot(
+        id = activeBuildId,
+        origin = activeBuildOrigin,
+        state = buildState,
+        tasks = buildTaskNames,
+        startedAt = buildStartedAt,
+        finishedAt = buildFinishedAt,
+        inProgress = isBuildInProgress,
+        projectPath = activeBuildPath,
+        reason = buildReason,
+    )
+  }
+
+  /** Immutable view of the build state, used by the MCP server. */
+  internal data class BuildStateSnapshot(
+      val id: String?,
+      val origin: String,
+      val state: String,
+      val tasks: List<String>,
+      val startedAt: Long,
+      val finishedAt: Long,
+      val inProgress: Boolean,
+      val projectPath: String,
+      val reason: String?,
+  )
 
   override fun getBuildArguments(): CompletableFuture<List<String>> {
     val extraArgs = ArrayList<String>()
@@ -482,7 +693,9 @@ class GradleBuildService :
     checkServerStarted()
     Objects.requireNonNull(params)
     return performBuildTasks(server!!.initialize(params)).thenApply { result ->
-      result
+      // A null result means the tooling connection is broken. Report it as a failure with a
+      // readable message instead of letting the caller hit a NullPointerException.
+      Objects.requireNonNull(result, "The build service returned no initialization result")
     }
   }
  
@@ -494,29 +707,50 @@ class GradleBuildService :
 
   override fun cancelCurrentBuild(): CompletableFuture<BuildCancellationRequestResult> {
     checkServerStarted()
-    return server!!.cancelCurrentBuild()
+    return server!!.cancelCurrentBuild().whenComplete { result, _ ->
+      if (result?.wasEnqueued == true) {
+        buildCancelRequested = true
+      }
+    }
   }
 
-  private fun <T> performBuildTasks(future: CompletableFuture<T>): CompletableFuture<T> {
-    return CompletableFuture.runAsync(this::onPrepareBuildRequest)
-        .handleAsync { _, _ ->
-          try {
-            return@handleAsync future.get()
-          } catch (e: Throwable) {
-            throw CompletionException(e)
-          }
-        }
-        .handle(this::markBuildAsFinished)
+  /**
+   * Runs [future] while owning the build slot.
+   *
+   * @throws BuildInProgressException when another build already owns the slot. The running build's
+   *   state is left untouched in that case: clearing it from the rejected attempt used to make a
+   *   running build look idle.
+   */
+  private fun <T> performBuildTasks(
+      future: CompletableFuture<T>,
+      projectPath: String = "",
+  ): CompletableFuture<T> {
+    val token = slotCounter.incrementAndGet()
+    acquireSlot(token, projectPath)
+    return future.whenComplete { _, error -> releaseSlot(token, error) }
   }
 
-  private fun onPrepareBuildRequest() {
+  private fun acquireSlot(token: Long, projectPath: String) {
     checkServerStarted()
     ensureTmpdir()
-    if (isBuildInProgress) {
-      logBuildInProgress()
-      throw BuildInProgressException()
+
+    synchronized(slotLock) {
+      if (slotOwner != null) {
+        logBuildInProgress()
+        throw BuildInProgressException()
+      }
+
+      slotOwner = token
+      isBuildInProgress = true
+
+      if (projectPath.isNotBlank()) {
+        activeBuildPath = projectPath
+      }
+      if (activeBuildPath.isBlank()) {
+        activeBuildPath =
+            runCatching { ProjectManagerImpl.getInstance().projectDirPath }.getOrDefault("")
+      }
     }
-    isBuildInProgress = true
   }
 
   @Throws(ToolingServerNotStartedException::class)
@@ -534,10 +768,55 @@ class GradleBuildService :
     log.warn("A build is already in progress!")
   }
 
-  @Suppress("UNUSED_PARAMETER")
-  private fun <T> markBuildAsFinished(result: T, throwable: Throwable?): T {
-    isBuildInProgress = false
-    return result
+  /**
+   * Releases the slot owned by [token].
+   *
+   * A rejected attempt never owns the slot, so it can never release it (see [acquireSlot]).
+   */
+  private fun releaseSlot(token: Long, error: Throwable?) {
+    synchronized(slotLock) {
+      if (slotOwner != token) {
+        return
+      }
+
+      slotOwner = null
+      isBuildInProgress = false
+      hasFatalFailure = error != null
+
+      if (buildState == STATE_RUNNING) {
+        // The build never reported a terminal event (tooling crash or hang): close the record so
+        // that it cannot stay `running` forever.
+        buildFinishedAt = System.currentTimeMillis()
+        buildState = if (buildCancelRequested) STATE_CANCELLED else STATE_FAILED
+        buildCancelRequested = false
+        buildReason = error?.message ?: "build finished without a result"
+      } else if (buildFinishedAt == 0L) {
+        buildFinishedAt = System.currentTimeMillis()
+      }
+    }
+  }
+
+  /**
+   * Closes a build which is still reported as `running` after [STALE_BUILD_TIMEOUT_MS].
+   *
+   * Called when the state is read, so that a hung build cannot keep the slot busy forever nor keep
+   * reporting `running` while nothing is happening.
+   */
+  internal fun failStaleBuild(reason: String): Boolean {
+    synchronized(slotLock) {
+      if (buildState != STATE_RUNNING || buildStartedAt <= 0L) {
+        return false
+      }
+
+      buildState = STATE_FAILED
+      buildFinishedAt = System.currentTimeMillis()
+      buildReason = reason
+      buildCancelRequested = false
+      slotOwner = null
+      isBuildInProgress = false
+      appendBuildLog("> Build marked as failed: $reason")
+      return true
+    }
   }
 
   internal fun startToolingServer(listener: OnServerStartListener?) {

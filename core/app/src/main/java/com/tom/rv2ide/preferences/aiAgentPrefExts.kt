@@ -36,6 +36,7 @@ class AIAgentPreferencesScreen(
 
   init {
     addPreference(AIAgentConfig())
+    addPreference(CustomProvidersScreen())
   }
 }
 
@@ -372,3 +373,4 @@ private class AnthropicApiKey(
     return if (apiKey.isBlank()) "Click to set API key" else "API Key: ${apiKey.take(8)}..."
   }
 }
+

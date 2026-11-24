@@ -22,8 +22,10 @@ import com.tom.rv2ide.artificial.agents.AIAgentManager
 import com.tom.rv2ide.artificial.agents.Agents
 import com.tom.rv2ide.fragments.ChatFragment
 import com.tom.rv2ide.fragments.AIHistoryFragment
+import com.tom.rv2ide.fragments.IDEPreferencesFragment
 import com.tom.rv2ide.managers.NavigationRailManager
 import com.tom.rv2ide.managers.CodeCompletionManager
+import com.tom.rv2ide.preferences.CustomProvidersScreen
 import com.tom.rv2ide.ui.CodeEditorView
 
 class ArtificialFragment(
@@ -106,8 +108,8 @@ class ArtificialFragment(
     
         TabLayoutMediator(tabLayout, viewPager) { tab, position ->
             tab.text = when (position) {
-                0 -> "Chat"
-                1 -> "History"
+                0 -> getString(R.string.ai_sidebar_tab_chat)
+                1 -> getString(R.string.ai_sidebar_tab_history)
                 else -> ""
             }
         }.attach()
@@ -195,8 +197,37 @@ class ArtificialFragment(
         }
     }
 
-    private fun showMainContent() {
-        val slideIn = AnimationUtils.loadAnimation(requireContext(), android.R.anim.slide_in_left)
+    /**
+     * Opens the list of user defined providers inside the sidebar.
+     *
+     * The list and the editor are the same preference screens used by
+     * `PreferencesActivity` (see `customProviderPrefExts.kt`), so the behaviour, the live refresh
+     * after adding or removing a provider and the parcelling safety stay identical.
+     */
+    fun openCustomProviders() {
+        val fragment =
+            IDEPreferencesFragment().apply {
+                arguments =
+                    Bundle().apply {
+                        putParcelableArrayList(
+                            IDEPreferencesFragment.EXTRA_CHILDREN,
+                            ArrayList(CustomProvidersScreen().rebuild()),
+                        )
+                    }
+            }
+
+        contentContainer.visibility = View.VISIBLE
+        viewPager.visibility = View.GONE
+        tabLayout.visibility = View.GONE
+        backPressedCallback.isEnabled = true
+
+        childFragmentManager.commit {
+            replace(R.id.contentContainer, fragment)
+            addToBackStack("custom_providers")
+        }
+    }
+
+    private fun showMainContent() {        val slideIn = AnimationUtils.loadAnimation(requireContext(), android.R.anim.slide_in_left)
         val slideOut = AnimationUtils.loadAnimation(requireContext(), android.R.anim.slide_out_right)
         
         contentContainer.startAnimation(slideOut)
@@ -218,12 +249,12 @@ class ArtificialFragment(
             val success = aiAgent.undoLastModification()
             if (success) {
                 view?.let {
-                    Snackbar.make(it, "Last modification undone", Snackbar.LENGTH_SHORT).show()
+                    Snackbar.make(it, R.string.ai_sidebar_msg_undo_done, Snackbar.LENGTH_SHORT).show()
                 }
                 undoFab.visibility = View.GONE
             } else {
                 view?.let {
-                    Snackbar.make(it, "Nothing to undo", Snackbar.LENGTH_SHORT).show()
+                    Snackbar.make(it, R.string.ai_sidebar_msg_undo_empty, Snackbar.LENGTH_SHORT).show()
                 }
             }
         }

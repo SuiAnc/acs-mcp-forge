@@ -23,6 +23,8 @@ import com.tom.rv2ide.artificial.agents.openai.OpenAI
 import com.tom.rv2ide.artificial.agents.anthropic.Anthropic
 import com.tom.rv2ide.artificial.agents.grok.Grok
 import com.tom.rv2ide.artificial.agents.deepseek.DeepSeek
+import com.tom.rv2ide.artificial.agents.custom.CustomAgent
+import com.tom.rv2ide.artificial.agents.custom.CustomProviders
 import com.tom.rv2ide.artificial.agents.local.LocalLLM
 import com.tom.rv2ide.artificial.file.FileWriteResult
 import com.tom.rv2ide.artificial.parser.SnippetParser
@@ -53,6 +55,7 @@ class AIAgentManager(private val context: Context) {
         Grok.registerAgent()
         DeepSeek.registerAgent()
         LocalLLM.registerAgent()
+        CustomAgent.registerAgent(context)
         
         permissionManager.setFileWriteEnabled(true)
         permissionManager.setRequireConfirmation(false)
@@ -100,6 +103,9 @@ class AIAgentManager(private val context: Context) {
     fun getCurrentProviderId(): String = currentProviderId
     
     fun getCurrentProviderName(): String {
+        CustomProviders.idOfProviderId(currentProviderId)?.let { customId ->
+            CustomProviders.byId(customId)?.name?.takeIf { it.isNotBlank() }?.let { return it }
+        }
         return currentAgent?.providerName ?: "Unknown"
     }
     

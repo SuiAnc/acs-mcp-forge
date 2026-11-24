@@ -20,6 +20,7 @@ package com.tom.rv2ide.artificial.agents
 import android.content.Context
 import android.content.SharedPreferences
 import android.preference.PreferenceManager
+import com.tom.rv2ide.artificial.agents.custom.CustomProviders
 
 /**
  * @author Mohammed-baqer-null @ https://github.com/Mohammed-baqer-null
@@ -146,7 +147,32 @@ class Agents(ctx: Context) {
   
   val ai_agents = openai_models + claude_models + gemini_models + deepseek_models + grok_models + localllm_models
   
+  /**
+   * Models of a user defined provider, or `null` when [providerId] does not refer to one.
+   *
+   * Custom providers keep their own model list (fetched from the service or typed by the user) and
+   * must never fall back to the models of a built-in provider.
+   */
+  private fun customModelsOf(providerId: String): Array<String>? {
+    val customId = CustomProviders.idOfProviderId(providerId) ?: return null
+    val provider = CustomProviders.byId(customId) ?: return emptyArray()
+    val models =
+        provider.models.ifEmpty { listOfNotNull(provider.model.takeIf { it.isNotBlank() }) }
+    return models.toTypedArray()
+  }
+
+  /** Registry id of the custom provider which owns [modelName], or `null`. */
+  private fun customProviderIdForModel(modelName: String): String? {
+    val provider =
+        CustomProviders.all().firstOrNull { provider ->
+          modelName == provider.model || modelName in provider.models
+        } ?: return null
+    return CustomProviders.providerIdOf(provider.id)
+  }
+
   fun getModelsForProvider(providerId: String): Array<String> {
+    customModelsOf(providerId)?.let { return it }
+
     return when(providerId) {
       "openai" -> openai_models
       "gemini" -> gemini_models
@@ -166,11 +192,17 @@ class Agents(ctx: Context) {
       modelName in deepseek_models -> "deepseek"
       modelName in grok_models -> "grok"
       modelName in localllm_models -> "localllm"
-      else -> null
+      else -> customProviderIdForModel(modelName)
     }
   }
   
   fun setAgent(name: String) {
+      customProviderIdForModel(name)?.let { customProviderId ->
+          sp.edit().putString(PROVIDER_KEY, customProviderId).apply()
+          sp.edit().putString(AGENT_KEY, name).apply()
+          return
+      }
+
       val provider = when {
           name in openai_models -> "openai"
           name in gemini_models -> "gemini"
@@ -187,7 +219,13 @@ class Agents(ctx: Context) {
   fun getAgent(): String {
     val savedModel = sp.getString(AGENT_KEY, null)
     if (savedModel != null) return savedModel
-    
+
+    CustomProviders.idOfProviderId(getProvider())?.let { customId ->
+      CustomProviders.byId(customId)?.let { provider ->
+        return provider.model.ifBlank { provider.models.firstOrNull() ?: "" }
+      }
+    }
+
     return when (getProvider()) {
       "openai" -> "gpt-4o"
       "gemini" -> "gemini-2.5-pro"

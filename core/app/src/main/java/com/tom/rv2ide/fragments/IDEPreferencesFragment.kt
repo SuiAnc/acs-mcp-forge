@@ -17,10 +17,12 @@
 
 package com.tom.rv2ide.fragments
 
+import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.fragment.app.FragmentActivity
 import androidx.preference.PreferenceCategory
 import androidx.preference.PreferenceGroup
 import com.google.android.material.transition.MaterialSharedAxis
@@ -79,6 +81,9 @@ class IDEPreferencesFragment : BasePreferenceFragment() {
   override fun onResume() {
     super.onResume()
     LSPStateObserver.addListener(serverStateListener)
+    // Re-render the current screen so that rows and their summaries reflect the latest stored
+    // values when the user comes back from a sub screen (for example after editing a provider).
+    refreshPreferences()
   }
 
   override fun onPause() {
@@ -93,6 +98,29 @@ class IDEPreferencesFragment : BasePreferenceFragment() {
 
     preferenceScreen.removeAll()
     addChildren(this.children, preferenceScreen)
+  }
+
+  /** Re-renders the current preference screen from its children. */
+  fun refresh() = refreshPreferences()
+
+  /**
+   * Replaces this fragment with a new one showing [children].
+   *
+   * Needed when the set of rows changes (a provider was added or removed): the current screen was
+   * built from a snapshot taken when it was created and cannot be refreshed in place.
+   */
+  fun reload(children: List<IPreference>, pushToBackStack: Boolean) {
+    val replacement =
+        IDEPreferencesFragment().apply {
+          arguments =
+              Bundle().apply { putParcelableArrayList(EXTRA_CHILDREN, ArrayList(children)) }
+        }
+
+    parentFragmentManager
+        .beginTransaction()
+        .replace(this.id, replacement)
+        .apply { if (pushToBackStack) addToBackStack(null) }
+        .commit()
   }
 
   private fun addChildren(children: List<IPreference>, pref: PreferenceGroup) {
@@ -117,5 +145,13 @@ class IDEPreferencesFragment : BasePreferenceFragment() {
 
   companion object {
     const val EXTRA_CHILDREN = "ide.preferences.fragment.children"
+
+    /** Returns the preference fragment which is currently visible in [context], if any. */
+    fun current(context: Context): IDEPreferencesFragment? {
+      val activity = context as? FragmentActivity ?: return null
+      return activity.supportFragmentManager.fragments
+          .filterIsInstance<IDEPreferencesFragment>()
+          .lastOrNull { it.isAdded && !it.isHidden }
+    }
   }
 }

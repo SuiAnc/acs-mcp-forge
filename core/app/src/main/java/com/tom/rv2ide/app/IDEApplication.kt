@@ -41,6 +41,7 @@ import com.tom.rv2ide.activities.CrashHandlerActivity
 import com.tom.rv2ide.activities.editor.IDELogcatReader
 import com.tom.rv2ide.buildinfo.BuildInfo
 import com.tom.rv2ide.editor.schemes.IDEColorSchemeProvider
+import com.tom.rv2ide.mcp.McpServerManager
 import com.tom.rv2ide.eventbus.events.preferences.PreferenceChangeEvent
 import com.tom.rv2ide.preferences.internal.DevOpsPreferences
 import com.tom.rv2ide.preferences.internal.GeneralPreferences
@@ -136,6 +137,15 @@ class IDEApplication : TermuxApplication() {
 
     extractLoggerRuntime()
     extractJetbrainsMono()
+
+    // Starts the MCP server when the user enabled it in the developer options. The manager applies
+    // the preferences on a background thread and never blocks the application startup.
+    runCatching { McpServerManager.init(this) }
+        .onFailure { log.warn("Unable to initialize the MCP server", it) }
+
+    // Starts (or stops) the keep alive service according to the developer options.
+    runCatching { com.tom.rv2ide.services.keepalive.KeepAliveService.applyPreferences(this) }
+        .onFailure { log.warn("Unable to apply the keep alive preferences", it) }
   }
 
   /**

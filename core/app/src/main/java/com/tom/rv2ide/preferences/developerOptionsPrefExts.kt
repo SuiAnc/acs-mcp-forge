@@ -18,8 +18,17 @@
 package com.tom.rv2ide.preferences
 
 import android.content.Context
+import android.text.InputType
+import android.net.Uri
+import android.provider.Settings
+import android.widget.Toast
 import androidx.preference.Preference
+import com.google.android.material.textfield.TextInputLayout
 import com.tom.rv2ide.R
+import com.tom.rv2ide.mcp.McpServerManager
+import com.tom.rv2ide.services.keepalive.KeepAlivePreferences
+import com.tom.rv2ide.services.keepalive.KeepAliveService
+import com.tom.rv2ide.utils.DialogUtils
 import com.tom.rv2ide.preferences.internal.DevOpsPreferences
 import com.tom.rv2ide.preferences.internal.GeneralPreferences
 import com.tom.rv2ide.resources.R.string
@@ -35,6 +44,8 @@ internal class DeveloperOptionsScreen(
 
   init {
     addPreference(DebuggingPreferences())
+    addPreference(KeepAlivePreferencesGroup())
+    addPreference(McpServerScreen())
   }
 }
 
@@ -93,4 +104,361 @@ class IdeLogsEnabled(
     GeneralPreferences.ideLogsEnabled = newValue as? Boolean ?: GeneralPreferences.ideLogsEnabled
     return true
   }
+}
+
+// ---------------------------------------------------------------------------------------------
+// MCP server
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * Settings for the MCP (Model Context Protocol) server.
+ *
+ * The server listens on `127.0.0.1:6688` by default and exposes tools to list, read, create, edit,
+ * rename, move and delete files, create and open projects and run Gradle builds.
+ */
+@Parcelize
+internal class McpServerScreen(
+    override val key: String = DevOpsPreferences.KEY_DEVOPTS_MCP,
+    override val title: Int = string.idepref_devOptions_mcp_title,
+    override val summary: Int? = string.idepref_devOptions_mcp_summary,
+    override val children: List<IPreference> = mutableListOf(),
+) : IPreferenceScreen() {
+
+  init {
+    addPreference(McpServerEnabledPreference())
+    addPreference(McpServerHostPreference())
+    addPreference(McpServerPortPreference())
+    addPreference(McpServerTokenPreference())
+    addPreference(McpGenerateTokenPreference())
+    addPreference(McpAllowRemotePreference())
+    addPreference(McpAllowWritePreference())
+    addPreference(McpAllowBuildPreference())
+    addPreference(McpServerStatusPreference())
+    addPreference(McpAuditLogPreference())
+  }
+}
+
+@Parcelize
+internal class McpServerEnabledPreference(
+    override val key: String = DevOpsPreferences.KEY_DEVOPTS_MCP_ENABLED,
+    override val title: Int = string.idepref_devOptions_mcp_enabled_title,
+    override val summary: Int? = string.idepref_devOptions_mcp_enabled_summary,
+) :
+    SwitchPreference(
+        setValue = { enabled ->
+          DevOpsPreferences.mcpServerEnabled = enabled
+          McpServerManager.applyPreferences()
+        },
+        getValue = { DevOpsPreferences.mcpServerEnabled },
+    )
+
+@Parcelize
+internal class McpServerHostPreference(
+    override val key: String = DevOpsPreferences.KEY_DEVOPTS_MCP_HOST,
+    override val title: Int = string.idepref_devOptions_mcp_host_title,
+    override val summary: Int? = string.idepref_devOptions_mcp_host_summary,
+) : EditTextPreference() {
+
+  override fun onConfigureTextInput(input: TextInputLayout) {
+    input.setHint(DevOpsPreferences.DEFAULT_MCP_HOST)
+    input.editText?.setText(DevOpsPreferences.mcpHost)
+  }
+
+  override fun onPreferenceChanged(preference: Preference, newValue: Any?): Boolean {
+    val host = (newValue as? String)?.trim().orEmpty()
+    DevOpsPreferences.mcpHost =
+        if (host.isEmpty()) DevOpsPreferences.DEFAULT_MCP_HOST else host
+    McpServerManager.applyPreferences()
+    return true
+  }
+}
+
+@Parcelize
+internal class McpServerPortPreference(
+    override val key: String = DevOpsPreferences.KEY_DEVOPTS_MCP_PORT,
+    override val title: Int = string.idepref_devOptions_mcp_port_title,
+    override val summary: Int? = string.idepref_devOptions_mcp_port_summary,
+    private val hintRes: Int = string.idepref_devOptions_mcp_port_hint,
+) :
+    NumberInputEditTextPreference(
+        hint = hintRes,
+        setValue = { port ->
+          DevOpsPreferences.mcpPort =
+              if (port in 1024..65535) port else DevOpsPreferences.DEFAULT_MCP_PORT
+          McpServerManager.applyPreferences()
+        },
+        getValue = { DevOpsPreferences.mcpPort },
+    )
+
+@Parcelize
+internal class McpServerTokenPreference(
+    override val key: String = DevOpsPreferences.KEY_DEVOPTS_MCP_TOKEN,
+    override val title: Int = string.idepref_devOptions_mcp_token_title,
+    override val summary: Int? = string.idepref_devOptions_mcp_token_summary,
+) : EditTextPreference() {
+
+  override fun onConfigureTextInput(input: TextInputLayout) {
+    input.editText?.apply {
+      inputType =
+          InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+      setText(DevOpsPreferences.mcpToken)
+    }
+  }
+
+  override fun onPreferenceChanged(preference: Preference, newValue: Any?): Boolean {
+    DevOpsPreferences.mcpToken = (newValue as? String).orEmpty()
+    McpServerManager.applyPreferences()
+    return true
+  }
+}
+
+@Parcelize
+internal class McpGenerateTokenPreference(
+    override val key: String = DevOpsPreferences.KEY_DEVOPTS_MCP_GENERATE_TOKEN,
+    override val title: Int = string.idepref_devOptions_mcp_generate_token_title,
+    override val summary: Int? = string.idepref_devOptions_mcp_generate_token_summary,
+) : SimplePreference() {
+
+  override fun onPreferenceClick(preference: Preference): Boolean {
+    val token = McpServerManager.generateToken()
+    DevOpsPreferences.mcpToken = token
+    McpServerManager.applyPreferences()
+    Toast.makeText(
+            preference.context,
+            preference.context.getString(string.msg_mcp_token_generated, token),
+            Toast.LENGTH_LONG,
+        )
+        .show()
+    return true
+  }
+}
+
+@Parcelize
+internal class McpAllowRemotePreference(
+    override val key: String = DevOpsPreferences.KEY_DEVOPTS_MCP_ALLOW_REMOTE,
+    override val title: Int = string.idepref_devOptions_mcp_allow_remote_title,
+    override val summary: Int? = string.idepref_devOptions_mcp_allow_remote_summary,
+) :
+    SwitchPreference(
+        setValue = { allow ->
+          DevOpsPreferences.mcpAllowRemote = allow
+          McpServerManager.applyPreferences()
+        },
+        getValue = { DevOpsPreferences.mcpAllowRemote },
+    )
+
+@Parcelize
+internal class McpAllowWritePreference(
+    override val key: String = DevOpsPreferences.KEY_DEVOPTS_MCP_ALLOW_WRITE,
+    override val title: Int = string.idepref_devOptions_mcp_allow_write_title,
+    override val summary: Int? = string.idepref_devOptions_mcp_allow_write_summary,
+) :
+    SwitchPreference(
+        setValue = { allow ->
+          DevOpsPreferences.mcpAllowWrite = allow
+          McpServerManager.applyPreferences()
+        },
+        getValue = { DevOpsPreferences.mcpAllowWrite },
+    )
+
+@Parcelize
+internal class McpAllowBuildPreference(
+    override val key: String = DevOpsPreferences.KEY_DEVOPTS_MCP_ALLOW_BUILD,
+    override val title: Int = string.idepref_devOptions_mcp_allow_build_title,
+    override val summary: Int? = string.idepref_devOptions_mcp_allow_build_summary,
+) :
+    SwitchPreference(
+        setValue = { allow ->
+          DevOpsPreferences.mcpAllowBuild = allow
+          McpServerManager.applyPreferences()
+        },
+        getValue = { DevOpsPreferences.mcpAllowBuild },
+    )
+
+/**
+ * Shows the current state of the MCP server. Tapping the item refreshes the summary.
+ */
+@Parcelize
+internal class McpServerStatusPreference(
+    override val key: String = DevOpsPreferences.KEY_DEVOPTS_MCP_STATUS,
+    override val title: Int = string.idepref_devOptions_mcp_status_title,
+) : IPreference() {
+
+  override fun onCreateView(context: Context): Preference {
+    val preference = Preference(context)
+    preference.key = key
+    preference.title = context.getString(title)
+    preference.summary = McpServerManager.statusSummary()
+    preference.setOnPreferenceClickListener { clicked ->
+      val summary = McpServerManager.statusSummary()
+      clicked.summary = summary
+      Toast.makeText(context, summary, Toast.LENGTH_LONG).show()
+      true
+    }
+    return preference
+  }
+}
+
+/**
+ * Shows the recent MCP tool invocations recorded in the audit log.
+ */
+@Parcelize
+internal class McpAuditLogPreference(
+    override val key: String = "${DevOpsPreferences.KEY_DEVOPTS_MCP}.auditLog",
+    override val title: Int = string.idepref_devOptions_mcp_audit_title,
+    override val summary: Int? = string.idepref_devOptions_mcp_audit_summary,
+) : SimplePreference() {
+
+  override fun onPreferenceClick(preference: Preference): Boolean {
+    val context = preference.context
+    val entries = McpServerManager.recentAuditEntries(50)
+    val content =
+        if (entries.isEmpty()) {
+          context.getString(string.msg_mcp_audit_empty)
+        } else {
+          entries.joinToString("\n")
+        }
+    DialogUtils.newMaterialDialogBuilder(context)
+        .setTitle(string.idepref_devOptions_mcp_audit_title)
+        .setMessage(content)
+        .setPositiveButton(android.R.string.ok, null)
+        .setNeutralButton(string.msg_mcp_audit_clear) { _, _ ->
+          McpServerManager.clearAuditLog()
+          Toast.makeText(context, string.msg_mcp_audit_cleared, Toast.LENGTH_SHORT).show()
+        }
+        .show()
+    return true
+  }
+}
+
+// ---------------------------------------------------------------------------------------------
+// Keep alive
+// ---------------------------------------------------------------------------------------------
+
+/** Keep alive switches: foreground service notification and the floating overlay button. */
+@Parcelize
+internal class KeepAlivePreferencesGroup(
+    override val key: String = "ide.prefs.developerOptions.keepAlive.group",
+    override val title: Int = string.idepref_keepAlive_group,
+    override val children: List<IPreference> = mutableListOf(),
+) : IPreferenceGroup() {
+
+  init {
+    addPreference(KeepAliveEnabledPreference())
+    addPreference(KeepAliveNotificationPreference())
+    addPreference(KeepAliveFloatingPreference())
+    addPreference(KeepAliveEdgeDelayPreference())
+    addPreference(KeepAliveAlphaPreference())
+    addPreference(KeepAliveOverlayPermissionPreference())
+  }
+}
+
+@Parcelize
+internal class KeepAliveEnabledPreference(
+    override val key: String = KeepAlivePreferences.KEY_ENABLED,
+    override val title: Int = string.idepref_keepAlive_enabled_title,
+    override val summary: Int? = string.idepref_keepAlive_enabled_summary,
+) :
+    SwitchPreference(
+        setValue = { enabled ->
+          KeepAlivePreferences.enabled = enabled
+          KeepAliveService.applyPreferences(prefContext())
+        },
+        getValue = { KeepAlivePreferences.enabled },
+    )
+
+@Parcelize
+internal class KeepAliveNotificationPreference(
+    override val key: String = KeepAlivePreferences.KEY_NOTIFICATION,
+    override val title: Int = string.idepref_keepAlive_notification_title,
+    override val summary: Int? = string.idepref_keepAlive_notification_summary,
+) :
+    SwitchPreference(
+        setValue = { enabled ->
+          KeepAlivePreferences.notificationEnabled = enabled
+          KeepAliveService.applyPreferences(prefContext())
+        },
+        getValue = { KeepAlivePreferences.notificationEnabled },
+    )
+
+@Parcelize
+internal class KeepAliveFloatingPreference(
+    override val key: String = KeepAlivePreferences.KEY_FLOATING,
+    override val title: Int = string.idepref_keepAlive_floating_title,
+    override val summary: Int? = string.idepref_keepAlive_floating_summary,
+) :
+    SwitchPreference(
+        setValue = { enabled ->
+          KeepAlivePreferences.floatingEnabled = enabled
+          KeepAliveService.applyPreferences(prefContext())
+        },
+        getValue = { KeepAlivePreferences.floatingEnabled },
+    )
+
+@Parcelize
+internal class KeepAliveEdgeDelayPreference(
+    override val key: String = KeepAlivePreferences.KEY_EDGE_DELAY,
+    override val title: Int = string.idepref_keepAlive_edge_delay_title,
+    override val summary: Int? = string.idepref_keepAlive_edge_delay_summary,
+) :
+    NumberInputEditTextPreference(
+        hint = string.idepref_keepAlive_edge_delay_hint,
+        setValue = { value -> KeepAlivePreferences.edgeDelayMs = value },
+        getValue = { KeepAlivePreferences.edgeDelayMs },
+    )
+
+@Parcelize
+internal class KeepAliveAlphaPreference(
+    override val key: String = KeepAlivePreferences.KEY_ALPHA,
+    override val title: Int = string.idepref_keepAlive_alpha_title,
+    override val summary: Int? = string.idepref_keepAlive_alpha_summary,
+) :
+    NumberInputEditTextPreference(
+        hint = string.idepref_keepAlive_alpha_hint,
+        setValue = { value ->
+          KeepAlivePreferences.alphaPercent = value
+          KeepAliveService.applyPreferences(prefContext())
+        },
+        getValue = { KeepAlivePreferences.alphaPercent },
+    )
+
+@Parcelize
+internal class KeepAliveOverlayPermissionPreference(
+    override val key: String = "ide.prefs.developerOptions.keepAlive.overlayPermission",
+    override val title: Int = string.idepref_keepAlive_permission_title,
+    override val summary: Int? = string.idepref_keepAlive_permission_summary,
+) : IPreference() {
+
+  override fun onCreateView(context: Context): Preference {
+    val preference = Preference(context)
+    preference.key = key
+    preference.title = context.getString(title)
+    preference.summary = context.getString(string.idepref_keepAlive_permission_summary)
+    preference.setOnPreferenceClickListener {
+      val canDraw =
+          android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.M ||
+              Settings.canDrawOverlays(context)
+      if (canDraw) {
+        Toast.makeText(context, string.idepref_keepAlive_permission_granted, Toast.LENGTH_SHORT)
+            .show()
+      } else {
+        runCatching {
+          context.startActivity(
+              android.content.Intent(
+                      Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                      Uri.parse("package:" + context.packageName),
+                  )
+                  .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+          )
+        }
+      }
+      true
+    }
+    return preference
+  }
+}
+
+/** Small helper so the preference callbacks can start the service without an Activity reference. */
+private fun prefContext(): android.content.Context {
+  return com.tom.rv2ide.app.BaseApplication.getBaseInstance()
 }
