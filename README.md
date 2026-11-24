@@ -1,3 +1,19 @@
+> **个人二开分支 / Unofficial fork**
+>
+> 本仓库是 [AndroidCSOfficial/android-code-studio](https://github.com/AndroidCSOfficial/android-code-studio)（GPLv3）的**非官方**分支，
+> 新增：MCP 服务器（AI 客户端可直接读写项目、跑构建）、自定义 AI 供应商（Chat Completions / Responses / Assistants）、
+> 后台保活（常驻通知 + 3 秒贴边悬浮窗）。
+>
+> - 与原项目官方**无隶属、无背书**；**请勿向官方反馈本分支的任何问题**。
+> - **不接受**催更、议题、Bug 报告、PR 或功能请求。
+> - 本文档与代码由 **Agent 大模型**参与生成，可能存在错误，风险自负；压缩包解压密码 **6688**。
+> - 详细声明见 [`DISCLAIMER.md`](DISCLAIMER.md)，改动记录见 [`NOTICE`](NOTICE)。
+> - 构建说明见 [`docs/mcp/BUILD-ENVIRONMENT.md`](docs/mcp/BUILD-ENVIRONMENT.md)，MCP 用法见 [`docs/mcp/MCP-USAGE.md`](docs/mcp/MCP-USAGE.md)。
+>
+> 以下是上游原始 README。
+
+---
+
 <p align="left">
   <img src="https://avatars.githubusercontent.com/u/234419170?s=400&u=43571ebf481969baafb8399813ad57f46c19eb95&v=4" alt="AndroidIDE" width="80" height="80"/>
 </p>
@@ -8,29 +24,18 @@
 <p><br>
 
 <p align="left">
-<!-- Latest release -->
-<img src="https://img.shields.io/github/v/release/AndroidCSOfficial/android-code-studio?include_prereleases&amp;label=latest%20release" alt="Latest release">
-<!-- Build and test -->
-<!-- <img src="https://github.com/Mohammed-baqer-null/android-code-studio/actions/workflows/asm_build.yml/badge.svg" alt="Builds and tests"> -->
-<!-- Crowdin -->
-<a href="https://crowdin.com/project/androidide"><img src="https://badges.crowdin.net/androidide/localized.svg" alt="Crowdin"></a>
+<!-- Fork release -->
+<a href="https://github.com/SuiAnc/acs-mcp-forge/releases">
+  <img src="https://img.shields.io/github/v/release/SuiAnc/acs-mcp-forge?include_prereleases&amp;label=fork%20release" alt="Fork release">
+</a>
 <!-- License -->
-<img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License"></p>
-
+<img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License">
+</p>
 
 <p align="left">
-  <a href="https://github.com/Mohammed-baqer-null/android-code-studio/issues/new?labels=bug&template=BUG.yml&title=%5BBug%5D%3A+">
-    <img src="https://img.shields.io/badge/Report%20Bug-red?style=for-the-badge&logo=github" alt="Report a bug">
-  </a>
-  <a href="https://github.com/Mohammed-baqer-null/android-code-studio/issues/new?labels=feature&template=FEATURE.yml&title=%5BFeature%5D%3A+">
-    <img src="https://img.shields.io/badge/Request%20Feature-brightgreen?style=for-the-badge&logo=github" alt="Request a feature">
-  </a>
-  <a href="https://t.me/rv2ide">
-    <img src="https://img.shields.io/badge/Telegram-Join%20Us-1DA1F2?style=for-the-badge&logo=telegram" alt="Join on Telegram">
-  </a>
-    <a href="https://docs.androidide.com/">
-    <img src="https://img.shields.io/badge/Docs-Explore-blue?style=for-the-badge&logo=read-the-docs" alt="Explore the docs">
-  </a>
+  <b>本分支不接受 Bug 报告与功能请求</b>（见 <a href="DISCLAIMER.md">DISCLAIMER.md</a>）。
+  上游文档：<a href="https://docs.androidide.com/">docs.androidide.com</a> ·
+  上游仓库：<a href="https://github.com/AndroidCSOfficial/android-code-studio">AndroidCSOfficial/android-code-studio</a>
 </p>
 
 ## Features

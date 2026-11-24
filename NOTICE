@@ -1,0 +1,121 @@
+# NOTICE
+
+本文件记录本仓库（`acs-mcp-forge`）相对上游的修改，用于满足 GNU GPLv3 第 5(a) 条
+「显著声明已修改并注明日期」的要求。
+
+---
+
+## 1. 上游项目
+
+| 项 | 值 |
+|---|---|
+| 项目 | Android Code Studio |
+| 仓库 | https://github.com/AndroidCSOfficial/android-code-studio |
+| 许可证 | GNU General Public License v3.0（见 `LICENSE`） |
+| 本分支基线 | 分支 `dev`，提交 `24cf7fe`（Merge pull request #416 from nullij/dev） |
+| 本分支仓库 | https://github.com/SuiAnc/acs-mcp-forge |
+
+本分支与上游官方**无隶属、合作或背书关系**；上游不负责本分支的任何问题。
+
+---
+
+## 2. 修改记录
+
+> 本仓库同时包含源码与文档；本节记录相对上游基线的全部修改。发布二进制时，请在本节补充与其对应的 commit 哈希。
+
+### 2026-11-23 — 集成 MCP 服务器
+
+新增（`core/app/src/main/java/com/tom/rv2ide/mcp/`）：
+
+- `McpServerManager.kt`、`McpToolRegistry.kt`、`McpBuildFacade.kt`、`McpFileEvents.kt`
+- `protocol/JsonRpc.kt`、`protocol/McpProtocol.kt`
+- `server/HttpCodec.kt`、`server/McpHttpServer.kt`
+- `security/PathSandbox.kt`、`security/BearerAuth.kt`、`security/AuditLog.kt`
+- `tools/McpTool.kt`、`tools/Schema.kt`、`tools/TextEdit.kt`、`tools/FileTools.kt`、
+  `tools/WorkspaceTools.kt`、`tools/BuildTools.kt`
+
+修改（仅追加）：
+
+| 文件 | 修改内容 |
+|---|---|
+| `utilities/preferences/.../internal/DevOpsPreferences.kt` | 新增 MCP 相关偏好键与属性 |
+| `core/app/.../preferences/developerOptionsPrefExts.kt` | 新增「MCP 服务器」设置页与设置项 |
+| `core/resources/.../values/strings.xml`、`values-zh-rCN/strings.xml` | 新增中英文字符串 |
+| `core/app/.../services/builder/GradleBuildService.kt` | 新增只读构建日志环与状态快照（不改既有分支） |
+| `core/app/.../app/IDEApplication.kt` | 启动时按偏好初始化 MCP 服务 |
+| `core/app/build.gradle.kts` | 新增可选的 `localDebug` 签名回退（仅在传入 `-PlocalDebugKeystore` 时生效） |
+
+### 2026-11-24 — 保活能力与自定义 AI 供应商、MCP 缺陷修复
+
+新增：
+
+- `core/app/.../services/keepalive/KeepAlivePreferences.kt`、`KeepAliveService.kt`、`FloatingWindowController.kt`
+- `core/app/.../artificial/agents/custom/CustomProvider.kt`、`CustomProviderApi.kt`、`CustomAgent.kt`
+- `core/app/.../preferences/customProviderPrefExts.kt`
+
+修改：
+
+| 文件 | 修改内容 |
+|---|---|
+| `core/app/src/main/AndroidManifest.xml` | 声明保活服务与相关权限 |
+| `core/app/.../preferences/developerOptionsPrefExts.kt` | 新增「后台保活」设置组 |
+| `core/app/.../artificial/agents/AIAgentManager.kt` | 注册自定义供应商、显示其名称 |
+| `core/app/.../preferences/aiAgentPrefExts.kt` | 「AI 助手」页新增「自定义供应商」入口 |
+| `core/app/.../mcp/tools/{FileTools,WorkspaceTools,BuildTools}.kt` | 修复 13 项实测缺陷（二进制检测、忽略目录过滤、行数统计、树结构、事务化建项目、构建状态与 buildId 校验等） |
+| `core/app/.../mcp/McpBuildFacade.kt` | 取消结果结构化、事件快照 |
+| `core/app/.../services/builder/GradleBuildService.kt` | 新增 `cancelled` 状态、运行中任务回填、事件缓冲 |
+| `external/atc/.../toplevel/SettingsGradleWriter.kt`、`utilities/templates-api/.../base/root/settings.kt` | 新项目模板默认仓库顺序调整（规避 `repo.maven.apache.org` 不可达的网络） |
+| `core/resources/.../values/strings.xml`、`values-zh-rCN/strings.xml` | 新增保活与自定义供应商文案 |
+
+
+### 2026-11-24（后续批次）— 自定义供应商入口修复、模板资产与构建稳定性
+
+新增：
+
+- `core/app/.../preferences/customProviderPrefExts.kt`（自定义供应商设置页，含导航与列表重建）
+- `core/app/.../artificial/agents/custom/`（`CustomProvider` / `CustomProviderApi` / `CustomAgent`）
+- `core/app/.../services/keepalive/`（前台服务、悬浮窗、偏好）
+- `composite-builds/build-logic/plugins/.../tasks/PackageGradleWrapperTask.kt`（构建期打包 Gradle Wrapper 资产）
+- `utilities/templates-api/.../base/MissingIdeAssetException.kt`（资产缺失的业务异常）
+
+修改（主要）：
+
+| 文件 | 修改内容 |
+|---|---|
+| `core/app/.../preferences/customProviderPrefExts.kt` | 「新增供应商」改为直接进入编辑页；列表在返回时重建，不再调用 `Activity.recreate()` |
+| `core/app/.../fragments/IDEPreferencesFragment.kt` | 新增 `refresh()` / `reload(...)`，`onResume` 时重绘当前设置页 |
+| `core/app/.../fragments/sidebar/{AIPreferencesFragment,ArtificialFragment}.kt`、`res/layout/fragment_ai_preferences.xml` | 自定义供应商入口与状态展示 |
+| `core/app/.../artificial/agents/Agents.kt` | 自定义供应商使用自己的模型列表，不回落到内置白名单 |
+| `core/app/.../utils/TemplateRecipeExecutor.kt` | 读取资产前做存在性检查，缺失时抛业务异常 |
+| `utilities/templates-api/.../ProjectTemplateBuilder.kt`、`root/{settings.kt,buildGradle.kt}`、`external/atc/.../TopLevelGradleWriter.kt` | 模板脚本改用 `rootProject.layout.buildDirectory`，并调整默认仓库顺序 |
+| `composite-builds/build-logic/.../AndroidIDEAssetsPlugin.kt` | 构建期把 Gradle Wrapper 打包进 `data/common` 资产 |
+| `core/app/.../preferences/editorPrefExts.kt` | 偏好类重命名（避免与新增类冲突） |
+| `gradle/wrapper/gradle-wrapper.properties` | `networkTimeout` 调整为 120000 |
+
+### 文档
+
+- 新增 `README.md` 顶部 fork 声明、`NOTICE`、`DISCLAIMER.md`、`CONTRIBUTING.md`
+- 新增 `docs/mcp/BUILD-ENVIRONMENT.md`、`docs/mcp/MCP-USAGE.md`、`docs/mcp/selftest.sh`、`docs/mcp/devcheck/JvmSelfCheck.kt`
+- 移除开发过程中的计划/任务类文档（`TASK-PROMPT-*`、`*-PLAN.md`、`CHANGES-*.md`），仅保留面向使用者的说明
+
+---
+
+## 3. 第三方组件
+
+| 组件 | 许可证 | 说明 |
+|---|---|---|
+| Android Code Studio（上游） | GPLv3 | 本分支的基础 |
+| [sora-editor](https://github.com/Rosemo/sora-editor) | LGPL-2.1 | 本分支使用社区 fork（`nullij/sora-editor`，tag `0.24.7`）本地构建的 AAR，坐标为 `io.github.rosemoe:editor:0.24.7-acs`；构建步骤见 `docs/mcp/BUILD-ENVIRONMENT.md` §4 |
+| 其他 Gradle 依赖 | 各自许可证 | 见各模块 `build.gradle(.kts)` 与依赖坐标 |
+
+> 关于仓库中的密钥库：`signing/signing-key.jks`、`core/app/dev.keystore`、`termux/application/testkey_untrusted.jks`
+> 均为**上游项目原有文件**，本分支未修改、未使用（本分支发布的 APK 使用单独的签名密钥，证书指纹见 Release 说明）。
+> 构建时如需签名，请使用 `-PlocalDebugKeystore=...` 或配置你自己的 keystore。
+
+---
+
+## 4. 源码获取
+
+- 上游对应源码：见第 1 节的仓库与提交。
+- 本分支源码：即本仓库；发布二进制（APK / 压缩包）时，请在 Release 说明里指向与其对应的 tag/commit，并同时提供源码归档。
+- 若你收到的是二进制但找不到对应源码，请勿分发，并联系发布者补齐。
