@@ -110,7 +110,7 @@ class AIPreferencesFragment(
             CustomProviders.all().map { provider ->
                 ProviderEntry(
                     id = CustomProviders.providerIdOf(provider.id),
-                    label = provider.name.ifBlank { "Custom" },
+                    label = provider.name.ifBlank { getString(R.string.ai_provider_custom_fallback) },
                 )
             }
         return builtInProviders + custom
@@ -161,7 +161,7 @@ class AIPreferencesFragment(
         val providerDisplayName =
             entry?.label
                 ?: CustomProviders.idOfProviderId(currentProvider)?.let { id ->
-                      CustomProviders.byId(id)?.name?.ifBlank { "Custom" }
+                      CustomProviders.byId(id)?.name?.ifBlank { getString(R.string.ai_provider_custom_fallback) }
                   }
                 ?: currentProvider.uppercase()
 

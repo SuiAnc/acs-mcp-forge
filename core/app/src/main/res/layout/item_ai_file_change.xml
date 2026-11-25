@@ -43,7 +43,7 @@
                 android:id="@+id/fileStatus"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Modified"
+                android:text="@string/ai_file_change_modified"
                 android:textAppearance="?attr/textAppearanceBodySmall"
                 android:layout_marginTop="4dp" />
 

@@ -1177,7 +1177,47 @@ This AI agent is designed to assist you in developing Android applications direc
 
     <string name="app_title_line_1">Android</string>
     <string name="app_title_line_2">Code Studio</string>
-    <string name="app_subtitle">Your ideas, Anywhere</string>
+    <string name="asset_studio_preview">Preview</string>
+  <string name="asset_studio_source">Source</string>
+  <string name="asset_studio_select_image">Select image</string>
+  <string name="asset_studio_load_xml">Load XML</string>
+  <string name="asset_studio_source_hint">Choose an image or XML vector to create app icons</string>
+  <string name="asset_studio_icon_settings">Icon settings</string>
+  <string name="asset_studio_icon_name_hint">Icon name</string>
+  <string name="asset_studio_shape">Shape</string>
+  <string name="asset_studio_shape_circle">Circle</string>
+  <string name="asset_studio_shape_square">Square</string>
+  <string name="asset_studio_shape_rounded">Rounded</string>
+  <string name="asset_studio_background_color">Background color</string>
+  <string name="asset_studio_choose_color">Choose color</string>
+  <string name="asset_studio_custom">Custom</string>
+  <string name="asset_studio_foreground_scale">Foreground scale</string>
+  <string name="asset_studio_rounded_corners">Rounded corners</string>
+  <string name="asset_studio_generate_icons">Generate icons</string>
+  <string name="asset_studio_vector_drawable">Vector drawable</string>
+  <string name="asset_studio_icon_imported">Icon imported from Material Icons</string>
+  <string name="asset_studio_vector_load_failed">Failed to load vector from selection</string>
+  <string name="asset_studio_xml_loaded">XML loaded successfully</string>
+  <string name="asset_studio_vector_create_failed">Failed to create VectorDrawable from XML</string>
+  <string name="asset_studio_xml_read_failed">Failed to read XML content</string>
+  <string name="asset_studio_preview_updated">XML preview updated</string>
+  <string name="asset_studio_image_preview_updated">Image preview updated</string>
+  <string name="asset_studio_select_file_first">Please select an image or XML file first</string>
+  <string name="asset_studio_material_icons">Material Icons</string>
+  <string name="asset_studio_browse_in_app">Browse in app</string>
+  <string name="asset_studio_paste_vector_xml">Paste vector XML</string>
+  <string name="asset_studio_import_vector_xml">Import vector XML</string>
+  <string name="asset_studio_vector_imported">Vector imported</string>
+  <string name="asset_studio_vector_parse_failed">Failed to parse vector XML</string>
+  <string name="asset_studio_no_project">No project opened</string>
+  <string name="ai_permission_title">AI file write permissions</string>
+  <string name="ai_permission_enable_write">Enable AI file writing</string>
+  <string name="ai_permission_require_confirm">Require confirmation before writing</string>
+  <string name="ai_permission_auto_backup">Auto backup files before writing</string>
+  <string name="ai_permission_warning">Warning: enabling file writing allows AI to modify your project files. Always review changes before applying.</string>
+  <string name="ai_file_change_modified">Modified</string>
+
+  <string name="app_subtitle">Your ideas, Anywhere</string>
 
     <string name="welcome_back">Welcome back!</string>
     <string name="welcome_back_subtitle">Ready to build something amazing?</string>
@@ -1202,4 +1242,15 @@ This AI agent is designed to assist you in developing Android applications direc
     <string name="desc_project_options">Project options</string>
     
 
+  <string name="ai_chat_enter_request">Please enter a request</string>
+  <string name="ai_chat_project_loaded">Project loaded successfully</string>
+  <string name="ai_chat_project_load_failed">Failed to load project</string>
+  <string name="ai_chat_project_load_error">Error loading project: %1$s</string>
+  <string name="ai_chat_project_path_missing">Project path not set</string>
+  <string name="ai_chat_file_not_found">File not found: %1$s</string>
+  <string name="ai_chat_opened">Opened: %1$s</string>
+  <string name="ai_chat_open_error">Error opening file: %1$s</string>
+  <string name="ai_chat_conversation_cleared">Conversation cleared</string>
+  <string name="ai_chat_conversation_cleared_ready">Conversation cleared. Ready for a new request.</string>
+  <string name="ai_provider_custom_fallback">Custom</string>
 </resources>
