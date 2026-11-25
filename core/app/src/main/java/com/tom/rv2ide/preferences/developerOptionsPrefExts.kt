@@ -20,7 +20,13 @@ package com.tom.rv2ide.preferences
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.graphics.Typeface
 import android.text.InputType
+import android.view.View
+import android.view.ViewGroup
+import android.widget.LinearLayout
+import android.widget.ScrollView
+import android.widget.TextView
 import android.net.Uri
 import android.provider.Settings
 import android.widget.Toast
@@ -371,25 +377,123 @@ internal class McpAuditLogPreference(
 
   override fun onPreferenceClick(preference: Preference): Boolean {
     val context = preference.context
-    val entries = McpServerManager.recentAuditEntries(50)
-    val content =
-        if (entries.isEmpty()) {
-          context.getString(string.msg_mcp_audit_empty)
-        } else {
-          entries.joinToString("\n")
+    val entries = McpServerManager.recentAuditLog(100)
+    val density = context.resources.displayMetrics.density
+    fun dp(value: Int) = (value * density).toInt()
+
+    val container =
+        LinearLayout(context).apply {
+          orientation = LinearLayout.VERTICAL
+          setPadding(dp(16), dp(8), dp(16), dp(8))
         }
-    DialogUtils.newMaterialDialogBuilder(context)
+
+    if (entries.isEmpty()) {
+      container.addView(
+          TextView(context).apply {
+            text = context.getString(string.msg_mcp_audit_empty)
+            setPadding(0, dp(8), 0, dp(8))
+          }
+      )
+    } else {
+      entries.asReversed().forEachIndexed { index, entry ->
+        val row =
+            LinearLayout(context).apply {
+              orientation = LinearLayout.VERTICAL
+              setPadding(0, dp(8), 0, dp(8))
+            }
+        row.addView(
+            TextView(context).apply {
+              text = "${entry.timeText}  ${entry.tool}"
+              textSize = 13f
+              setTypeface(typeface, Typeface.BOLD)
+            }
+        )
+        row.addView(
+            TextView(context).apply {
+              text =
+                  context.getString(
+                      string.msg_mcp_audit_entry_detail,
+                      operationLabel(context, entry.op),
+                      entry.durationMs,
+                      if (entry.isError) {
+                        context.getString(string.msg_mcp_audit_failed)
+                      } else {
+                        context.getString(string.msg_mcp_audit_ok)
+                      },
+                  )
+              textSize = 11f
+              setTextColor(0xFF888888.toInt())
+            }
+        )
+        container.addView(row)
+
+        if (index < entries.lastIndex) {
+          container.addView(
+              View(context).apply {
+                setBackgroundColor(0x33888888)
+                layoutParams =
+                    LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        dp(1),
+                    )
+              }
+          )
+        }
+      }
+    }
+
+    MaterialAlertDialogBuilder(context)
         .setTitle(string.idepref_devOptions_mcp_audit_title)
-        .setMessage(content)
+        .setView(ScrollView(context).apply { addView(container) })
         .setPositiveButton(android.R.string.ok, null)
-        .setNeutralButton(string.msg_mcp_audit_clear) { _, _ ->
+        .setNeutralButton(string.msg_mcp_audit_copy) { _, _ ->
+          copyAuditEntriesToClipboard(context, entries)
+        }
+        .setNegativeButton(string.msg_mcp_audit_clear) { _, _ ->
           McpServerManager.clearAuditLog()
           Toast.makeText(context, string.msg_mcp_audit_cleared, Toast.LENGTH_SHORT).show()
         }
         .show()
     return true
   }
+
+  private fun operationLabel(context: Context, op: String): String {
+    return when (op) {
+      "read" -> context.getString(string.msg_mcp_audit_type_read)
+      "write" -> context.getString(string.msg_mcp_audit_type_write)
+      "build" -> context.getString(string.msg_mcp_audit_type_build)
+      else -> context.getString(string.msg_mcp_audit_type_unknown)
+    }
+  }
+
+  private fun copyAuditEntriesToClipboard(
+      context: Context,
+      entries: List<com.tom.rv2ide.mcp.security.AuditLog.AuditEntry>,
+  ) {
+    if (entries.isEmpty()) {
+      Toast.makeText(context, string.msg_mcp_audit_empty, Toast.LENGTH_SHORT).show()
+      return
+    }
+    val text =
+        buildString {
+          append(context.getString(string.msg_mcp_audit_copy_header)).append('\n')
+          entries.asReversed().forEach { entry ->
+            append(entry.timeText).append('\t')
+            append(operationLabel(context, entry.op)).append('\t')
+            append(entry.tool).append('\t')
+            append(entry.durationMs).append("ms").append('\t')
+            append(if (entry.isError) "!" else "ok").append('\n')
+          }
+        }
+    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+        ?: return
+    clipboard.setPrimaryClip(
+        ClipData.newPlainText(context.getString(string.idepref_devOptions_mcp_audit_title), text)
+    )
+    Toast.makeText(context, string.msg_mcp_audit_copied, Toast.LENGTH_SHORT).show()
+  }
 }
+
 
 // ---------------------------------------------------------------------------------------------
 // Keep alive

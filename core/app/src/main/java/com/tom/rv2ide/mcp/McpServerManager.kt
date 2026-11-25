@@ -115,8 +115,10 @@ object McpServerManager {
   /** Returns the audit log of the tool invocations. */
   fun auditLog(): AuditLog? = auditLog
 
-  /** Returns the last [lines] audit log entries. */
-  fun recentAuditEntries(lines: Int = 50): List<String> = auditLog?.tail(lines) ?: emptyList()
+  /** Returns the most recent audit entries, newest last. */
+  fun recentAuditLog(limit: Int = AuditLog.DEFAULT_ENTRY_LIMIT): List<AuditLog.AuditEntry> {
+    return auditLog?.entries(limit) ?: emptyList()
+  }
 
   /** Clears the audit log. */
   fun clearAuditLog() {
@@ -184,7 +186,7 @@ object McpServerManager {
             logger = { message ->
               log.info("[mcp] {}", message)
               if (message.startsWith("tools/call")) {
-                audit.append(message)
+                recordAuditEntry(audit, message)
               }
             },
         )
@@ -242,6 +244,67 @@ object McpServerManager {
   private fun serverVersion(): String {
     return runCatching { BuildInfo.VERSION_NAME_SIMPLE }.getOrDefault("0.0.0")
   }
+
+  /**
+   * Converts the protocol log line (`tools/call name=... durationMs=... isError=... args=...`)
+   * into a structured audit entry.
+   */
+  private fun recordAuditEntry(audit: AuditLog, message: String) {
+    val match = TOOL_CALL_PATTERN.find(message)
+    if (match == null) {
+      audit.append(message)
+      return
+    }
+    val tool = match.groupValues[1]
+    val durationMs = match.groupValues[2].toLongOrNull() ?: 0L
+    val isError = match.groupValues[3].equals("true", ignoreCase = true)
+    val summary = match.groupValues.getOrElse(4) { "" }.trim()
+    audit.appendEntry(
+        timeMillis = System.currentTimeMillis(),
+        tool = tool,
+        op = operationOf(tool),
+        durationMs = durationMs,
+        isError = isError,
+        summary = summary,
+    )
+  }
+
+  /** Maps a tool name to a coarse operation type shown in the audit log screen. */
+  private fun operationOf(tool: String): String {
+    return when {
+      tool.startsWith("build_") -> "build"
+      tool in GIT_WRITE_TOOLS -> "write"
+      tool in WRITE_TOOLS -> "write"
+      else -> "read"
+    }
+  }
+
+  private val TOOL_CALL_PATTERN =
+      Regex("""name=(\S+)\s+durationMs=(\d+)\s+isError=(\w+)(?:\s+args=(.*))?""")
+
+  private val WRITE_TOOLS =
+      setOf(
+          "file_create",
+          "file_create_dir",
+          "file_write",
+          "file_edit",
+          "file_rename",
+          "file_move",
+          "file_delete",
+          "project_create",
+          "project_open",
+      )
+
+  private val GIT_WRITE_TOOLS =
+      setOf(
+          "git_stage",
+          "git_commit",
+          "git_checkout",
+          "git_discard",
+          "git_fetch",
+          "git_pull",
+          "git_push",
+      )
 
   private const val HEX = "0123456789abcdef"
 }

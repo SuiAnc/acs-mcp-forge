@@ -1060,6 +1060,16 @@ This AI agent is designed to assist you in developing Android applications direc
   <string name="idepref_devOptions_mcp_audit_title">View audit log</string>
   <string name="idepref_devOptions_mcp_audit_summary">Recent tool invocations from MCP clients</string>
   <string name="msg_mcp_audit_empty">No tool invocations have been recorded yet.</string>
+  <string name="msg_mcp_audit_copy">Copy</string>
+  <string name="msg_mcp_audit_copied">Audit log copied</string>
+  <string name="msg_mcp_audit_copy_header">time\ttype\ttool\tduration\tresult</string>
+  <string name="msg_mcp_audit_type_read">Read</string>
+  <string name="msg_mcp_audit_type_write">Write</string>
+  <string name="msg_mcp_audit_type_build">Build</string>
+  <string name="msg_mcp_audit_type_unknown">Other</string>
+  <string name="msg_mcp_audit_ok">OK</string>
+  <string name="msg_mcp_audit_failed">Failed</string>
+  <string name="msg_mcp_audit_entry_detail">%1$s · %2$d ms · %3$s</string>
   <string name="msg_mcp_audit_clear">Clear</string>
   <string name="msg_mcp_audit_cleared">Audit log cleared</string>
   <string name="title_build_variants">Build variants</string>
