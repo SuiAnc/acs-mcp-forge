@@ -421,6 +421,10 @@
 
   <!-- Preferences -->
   <string name="title_change_text_size">Editor font size</string>
+  <string name="idepref_version_notice_title">Version notice</string>
+  <string name="idepref_version_notice_summary">Fork disclaimer, what is new, pricing statement and repository</string>
+  <string name="msg_version_notice_body">[Fork] This app is a personal fork of Android Code Studio, with no affiliation or endorsement from the upstream project. Please do not report issues of this build upstream.\n\n[What is new] MCP server (23 tools) · Custom AI providers (Chat Completions / Responses / Assistants v2) · Keep alive (foreground notification + floating window that snaps to the edge after 3 seconds)\n\n[Pricing] This build is free, with no paid features. Reselling it is not allowed; if you paid for it, ask for a refund.\n\n[Source] https://github.com/SuiAnc/acs-mcp-forge (GPLv3)</string>
+  <string name="msg_version_notice_open_repo">Open repository</string>
   <string name="idepref_about_title">About Android Code Studio</string>
   <string name="idepref_build_clearCache_title">Clear Gradle caches</string>
   <string name="idepref_build_clearCache_summary">Clear Gradle caches directory. This will delete all dependencies downloaded by Gradle. Required files will be downloaded again in next build.</string>

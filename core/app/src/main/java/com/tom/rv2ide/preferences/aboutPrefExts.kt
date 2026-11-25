@@ -18,12 +18,18 @@
 package com.tom.rv2ide.preferences
 
 import android.content.Intent
+import android.net.Uri
 import com.tom.rv2ide.activities.AboutActivity
 import com.tom.rv2ide.app.IDEApplication
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.tom.rv2ide.resources.R
 
 private const val KEY_CHANGELOG = "idepref_changelog"
+private const val KEY_VERSION_NOTICE = "idepref_version_notice"
 private const val KEY_ABOUT = "idepref_about"
+
+/** Repository of this fork (not the upstream project). */
+private const val FORK_REPOSITORY_URL = "https://github.com/SuiAnc/acs-mcp-forge"
 
 val changelog =
     SimpleClickablePreference(
@@ -41,5 +47,28 @@ val about =
         summary = R.string.idepref_about_summary,
     ) {
       it.context.startActivity(Intent(it.context, AboutActivity::class.java))
+      true
+    }
+
+val versionNotice =
+    SimpleClickablePreference(
+        key = KEY_VERSION_NOTICE,
+        title = R.string.idepref_version_notice_title,
+        summary = R.string.idepref_version_notice_summary,
+    ) {
+      val context = it.context
+      MaterialAlertDialogBuilder(context)
+          .setTitle(R.string.idepref_version_notice_title)
+          .setMessage(R.string.msg_version_notice_body)
+          .setNegativeButton(android.R.string.cancel, null)
+          .setPositiveButton(R.string.msg_version_notice_open_repo) { _, _ ->
+            runCatching {
+              context.startActivity(
+                  Intent(Intent.ACTION_VIEW, Uri.parse(FORK_REPOSITORY_URL))
+                      .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+              )
+            }
+          }
+          .show()
       true
     }

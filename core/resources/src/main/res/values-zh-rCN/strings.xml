@@ -395,6 +395,10 @@
 
   <!-- Preferences -->
   <string name="title_change_text_size">编辑器字体大小</string>
+  <string name="idepref_version_notice_title">版本声明</string>
+  <string name="idepref_version_notice_summary">分支说明、本版新增、收费声明与仓库地址</string>
+  <string name="msg_version_notice_body">【分支说明】本应用是 Android Code Studio 的个人二开分支，与官方无隶属、无背书，请勿向官方反馈本分支的问题。\n\n【本版新增】MCP 服务器（23 个工具）· 自定义 AI 供应商（Chat Completions / Responses / Assistants v2）· 后台保活（常驻通知 + 3 秒贴边悬浮窗）\n\n【收费说明】本版永久免费，不存在任何收费项目；反对贩卖倒卖，若你是付费得来请尽快申请退款。\n\n【源码】https://github.com/SuiAnc/acs-mcp-forge（GPLv3）</string>
+  <string name="msg_version_notice_open_repo">打开仓库</string>
   <string name="idepref_about_title">关于 Android Code Studio</string>
   <string name="idepref_build_clearCache_title">清除 Gradle 缓存</string>
   <string name="idepref_build_clearCache_summary">清除 Gradle 缓存目录。这将删除 Gradle 下载的所有依赖项，所需的文件将在下一次构建中重新下载。</string>
