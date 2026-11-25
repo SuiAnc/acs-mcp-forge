@@ -137,6 +137,7 @@
   <string name="ai_sidebar_msg_undo_done">已撤销上一次修改</string>
   <string name="ai_sidebar_msg_undo_empty">没有可撤销的修改</string>
   <string name="ai_sidebar_msg_custom_models_empty">该供应商尚未配置模型</string>
+  <string name="ai_agent_no_provider">尚未配置可用的 AI 供应商。请到「设置 → 配置 → AI 助手」选择供应商或填写 API Key。</string>
   <string name="ai_agent_title">AI 助手</string>
   <string name="ai_agent_description">使用 AI 助手 生成由 AI 驱动的代码</string>
   <string name="ai_agent_prompt_hint">描述你想要生成什么代码…</string>

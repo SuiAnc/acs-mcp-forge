@@ -59,10 +59,44 @@ class AIAgentManager(private val context: Context) {
         
         permissionManager.setFileWriteEnabled(true)
         permissionManager.setRequireConfirmation(false)
-        
-        setProvider(currentProviderId)
+
+        restoreProvider()
     }
-    
+
+    /**
+     * Restores the provider which was selected last time.
+     *
+     * [Agents] already persists the selection in `ai_provider_name`, but this manager used to
+     * ignore it and always tried `gemini` in its initializer. Without a Gemini API key that
+     * attempt failed, [currentAgent] stayed `null` and every request ended with
+     * "No agent initialized" until the user manually selected a provider again.
+     */
+    private fun restoreProvider() {
+        val stored =
+            runCatching { Agents(context).getProvider() }.getOrNull()?.takeIf { it.isNotBlank() }
+        val candidates = buildList {
+            stored?.let { add(it) }
+            addAll(AIAgentRegistry.getAvailableProviders())
+        }.distinct()
+
+        for (providerId in candidates) {
+            if (setProvider(providerId)) {
+                if (stored != null && stored != providerId) {
+                    android.util.Log.i(
+                        "AIAgentManager",
+                        "Stored provider '$stored' is not usable, fell back to '$providerId'",
+                    )
+                }
+                return
+            }
+        }
+
+        android.util.Log.w(
+            "AIAgentManager",
+            "No usable AI provider is configured; waiting for the user to configure one",
+        )
+    }
+
     fun getCurrentAgent(): AIAgent? = currentAgent
 
     fun setProvider(providerId: String): Boolean {
@@ -80,6 +114,15 @@ class AIAgentManager(private val context: Context) {
         }
         
         currentProviderId = providerId
+
+        // Persist the selection and make sure the stored model belongs to this provider. This has
+        // to happen before the agent is created, because the agents read the model from [Agents].
+        val agents = Agents(context)
+        agents.setProvider(providerId)
+        if (!agents.isValidModelForProvider(agents.getAgent(), providerId)) {
+            agents.getModelsForProvider(providerId).firstOrNull()?.let { agents.setAgent(it) }
+        }
+
         currentAgent = factory.create(context)
         android.util.Log.d("AIAgentManager", "Agent created: ${currentAgent != null}")
         
@@ -281,8 +324,15 @@ class AIAgentManager(private val context: Context) {
 
         if (!success) {
           val attemptCount = currentAgent?.getCurrentAttemptCount() ?: 0
-          val agentName = currentAgent?.providerName ?: "No agent initialized"
-          callback.onError("Failed after $attemptCount attempts with $agentName.\n\nPlease check your API key and try again.")
+          val agentName = currentAgent?.providerName
+          val message =
+              if (agentName == null) {
+                context.getString(com.tom.rv2ide.resources.R.string.ai_agent_no_provider)
+              } else {
+                "Failed after $attemptCount attempts with $agentName.\n\n" +
+                    "Please check your API key and try again."
+              }
+          callback.onError(message)
           undoLastModification()
         }
     }

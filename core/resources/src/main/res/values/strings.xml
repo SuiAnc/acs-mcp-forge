@@ -137,6 +137,7 @@
   <string name="ai_sidebar_msg_undo_done">Last modification undone</string>
   <string name="ai_sidebar_msg_undo_empty">Nothing to undo</string>
   <string name="ai_sidebar_msg_custom_models_empty">No models configured for this provider</string>
+  <string name="ai_agent_no_provider">No AI provider is ready. Open Settings → Configuration → AI Assistant to select a provider or add an API key.</string>
   <string name="ai_agent_title">AI Agent</string>
   <string name="ai_agent_description">Get AI-powered code generation using AI Agent</string>
   <string name="ai_agent_prompt_hint">Describe what code you want to generate...</string>
