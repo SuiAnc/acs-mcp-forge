@@ -24,8 +24,9 @@ Cherry Studio 等 AI 客户端直接读项目、改文件、建项目、跑 Grad
 | 允许远程访问 | 关 | 关闭时强制绑定回环地址；开启后可监听 `0.0.0.0`，请配合令牌使用 |
 | 允许写操作 | 关 | 打开后才有 `file_create`/`file_write`/`file_edit`/`file_rename`/`file_move`/`file_delete`/`project_create`/`project_open` |
 | 允许构建 | 关 | 打开后才有 `build_*` 工具 |
+| 允许网络操作 | 关 | 打开后才有 `git_fetch` / `git_pull` / `git_push` |
 | 服务器状态 | — | 点一下刷新并显示当前监听地址、鉴权、请求数 |
-| 查看审计日志 | — | 最近 50 条工具调用记录，可清空 |
+| 查看审计日志 | — | 最近 100 条工具调用，按「时间+工具 / 类型·耗时·结果」分行显示，可复制（TSV）与清空 |
 
 > 开关一变，服务器立即按新配置重启。全部关闭后端口会被释放。
 
@@ -134,6 +135,25 @@ Header 里加 `Authorization: Bearer <令牌>`。
 | `build_cancel` | `buildId?` | 取消当前构建 |
 | `build_apk` | `projectPath?`, `variant?` | 定位最近产出的 APK |
 
+### Git（`git_*` 只读部分随时可用；写操作需「允许写操作」；网络操作需「允许网络操作」）
+
+| 工具 | 参数 | 说明 |
+|---|---|---|
+| `git_status` | `projectPath?` | 当前分支、工作区是否干净、变更文件（含是否已暂存）、远端列表 |
+| `git_diff` | `projectPath?`, `path?` | 单文件 diff；省略 `path` 时汇总全部变更（最多 10 个文件、8 KB） |
+| `git_log` | `projectPath?`, `count?` | 最近提交（hash / 作者 / 时间 / 标题） |
+| `git_branches` | `projectPath?` | 本地分支与当前分支 |
+| `git_stage` | `projectPath?`, `paths?`, `all?`, `unstage?` | 暂存 / 取消暂存 |
+| `git_commit` | `projectPath?`, `message`, `author?`, `email?` | 提交已暂存内容 |
+| `git_checkout` | `projectPath?`, `branch`, `force?` | 切分支；工作区有改动且未 `force` 时拒绝 |
+| `git_discard` | `projectPath?`, `path` | 丢弃单个文件的本地改动（**不可恢复**） |
+| `git_fetch` | `projectPath?`, `remote?` | 需要「允许网络操作」与已配置的 remote |
+| `git_pull` | `projectPath?`, `remote?`, `branch?` | 同上 |
+| `git_push` | `projectPath?`, `remote?`, `branch?` | 同上 |
+
+> 凭据：MCP **不接受**把 token 作为工具参数。`fetch/pull/push` 使用 remote URL 里内嵌的凭据（或匿名），
+> 失败时会把 JGit 的错误原样返回（例如 `Authentication is required`），按提示配置远端即可。
+
 ### 返回格式
 
 ```json
@@ -198,7 +218,7 @@ URL 少了协议头。必须写全：`http://127.0.0.1:6688/mcp`（`http://` 不
 本实现不支持该模式，请在客户端里把它配置成 Streamable HTTP / HTTP JSON。
 
 **工具列表里没有 `file_write` / `build_start`**
-「允许写操作」「允许构建」默认关闭，打开后立即生效（服务器会重启）。
+「允许写操作」「允许构建」「允许网络操作」默认关闭，打开后立即生效（服务器会重启）。
 
 **新建项目后构建失败：`Could not resolve ... repo.maven.apache.org:443 failed to respond`**
 不是项目代码问题，是 Maven Central 的规范主机 `repo.maven.apache.org` 在当前网络不可达（`mavenCentral()`
@@ -233,4 +253,6 @@ Android 限制了后台启动界面：项目已经登记，但需要你把 App �
 （或 File → Reload）即可看到磁盘上的新内容。
 
 **审计日志在哪**
-设置页「查看审计日志」，文件是 `filesDir/mcp/audit.log`（1 MB 轮转，`audit.log.1` 为上一份）。
+设置页「查看审计日志」：每条记录分两行显示（时间 + 工具 / 类型 · 耗时 · 结果），条之间有分隔线，
+底部「复制」可导出 TSV（时间、类型、工具、耗时、结果）。文件是 `filesDir/mcp/audit.log`
+（1 MB 轮转，`audit.log.1` 为上一份），旧版本的纯文本日志仍能读取。

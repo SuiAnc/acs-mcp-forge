@@ -423,7 +423,7 @@
   <string name="title_change_text_size">Editor font size</string>
   <string name="idepref_version_notice_title">Version notice</string>
   <string name="idepref_version_notice_summary">Fork disclaimer, what is new, pricing statement and repository</string>
-  <string name="msg_version_notice_body">[Fork] This app is a personal fork of Android Code Studio, with no affiliation or endorsement from the upstream project. Please do not report issues of this build upstream.\n\n[What is new] MCP server (23 tools) · Custom AI providers (Chat Completions / Responses / Assistants v2) · Keep alive (foreground notification + floating window that snaps to the edge after 3 seconds)\n\n[Pricing] This build is free, with no paid features. Reselling it is not allowed; if you paid for it, ask for a refund.\n\n[Source] https://github.com/SuiAnc/acs-mcp-forge (GPLv3)</string>
+  <string name="msg_version_notice_body">[Fork] This app is a personal fork of Android Code Studio, with no affiliation or endorsement from the upstream project. Please do not report issues of this build upstream.\n\n[What is new] MCP server (34 tools) · Custom AI providers (Chat Completions / Responses / Assistants v2) · Keep alive (foreground notification + floating window that snaps to the edge after 3 seconds)\n\n[Pricing] This build is free, with no paid features. Reselling it is not allowed; if you paid for it, ask for a refund.\n\n[Source] https://github.com/SuiAnc/acs-mcp-forge (GPLv3)</string>
   <string name="msg_version_notice_open_repo">Open repository</string>
   <string name="idepref_about_title">About Android Code Studio</string>
   <string name="idepref_build_clearCache_title">Clear Gradle caches</string>
@@ -1047,6 +1047,9 @@ This AI agent is designed to assist you in developing Android applications direc
   <string name="idepref_devOptions_mcp_allow_write_summary">Let clients create, edit, move and delete files</string>
   <string name="idepref_devOptions_mcp_allow_build_title">Allow builds</string>
   <string name="idepref_devOptions_mcp_allow_build_summary">Let clients start and cancel Gradle builds</string>
+  <string name="idepref_devOptions_mcp_allow_network_title">Allow network operations</string>
+  <string name="idepref_devOptions_mcp_allow_network_summary">Let clients run git fetch / pull / push (uses the remote URL credentials)</string>
+  <string name="msg_mcp_audit_type_network">Network</string>
   <string name="idepref_devOptions_mcp_status_title">Server status</string>
   <string name="idepref_devOptions_mcp_token_dialog_title">Access token</string>
   <string name="idepref_devOptions_mcp_token_visible_title">Show access token</string>

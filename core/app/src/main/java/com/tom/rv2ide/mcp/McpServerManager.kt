@@ -171,6 +171,7 @@ object McpServerManager {
             com.tom.rv2ide.mcp.tools.McpPermission.READ -> true
             com.tom.rv2ide.mcp.tools.McpPermission.WRITE -> DevOpsPreferences.mcpAllowWrite
             com.tom.rv2ide.mcp.tools.McpPermission.BUILD -> DevOpsPreferences.mcpAllowBuild
+            com.tom.rv2ide.mcp.tools.McpPermission.NETWORK -> DevOpsPreferences.mcpAllowNetwork
           }
         }
 
@@ -273,6 +274,7 @@ object McpServerManager {
   private fun operationOf(tool: String): String {
     return when {
       tool.startsWith("build_") -> "build"
+      tool in GIT_NETWORK_TOOLS -> "network"
       tool in GIT_WRITE_TOOLS -> "write"
       tool in WRITE_TOOLS -> "write"
       else -> "read"
@@ -296,15 +298,9 @@ object McpServerManager {
       )
 
   private val GIT_WRITE_TOOLS =
-      setOf(
-          "git_stage",
-          "git_commit",
-          "git_checkout",
-          "git_discard",
-          "git_fetch",
-          "git_pull",
-          "git_push",
-      )
+      setOf("git_stage", "git_commit", "git_checkout", "git_discard")
+
+  private val GIT_NETWORK_TOOLS = setOf("git_fetch", "git_pull", "git_push")
 
   private const val HEX = "0123456789abcdef"
 }

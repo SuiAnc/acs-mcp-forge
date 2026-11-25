@@ -264,8 +264,8 @@ class McpProtocol(
       )
       put(
           "instructions",
-          "Android Code Studio MCP server. Use file_* tools to browse and edit the opened project " +
-              "and build_* tools to run Gradle builds.",
+          "Android Code Studio MCP server. Use file_* tools to browse and edit the opened project, " +
+              "build_* tools to run Gradle builds and git_* tools for version control.",
       )
     }
   }

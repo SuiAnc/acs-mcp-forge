@@ -144,6 +144,7 @@ internal class McpServerScreen(
     addPreference(McpAllowRemotePreference())
     addPreference(McpAllowWritePreference())
     addPreference(McpAllowBuildPreference())
+    addPreference(McpAllowNetworkPreference())
     addPreference(McpServerStatusPreference())
     addPreference(McpAuditLogPreference())
   }
@@ -345,6 +346,20 @@ internal class McpAllowBuildPreference(
  * Shows the current state of the MCP server. Tapping the item refreshes the summary.
  */
 @Parcelize
+internal class McpAllowNetworkPreference(
+    override val key: String = DevOpsPreferences.KEY_DEVOPTS_MCP_ALLOW_NETWORK,
+    override val title: Int = string.idepref_devOptions_mcp_allow_network_title,
+    override val summary: Int? = string.idepref_devOptions_mcp_allow_network_summary,
+) :
+    SwitchPreference(
+        setValue = { allow ->
+          DevOpsPreferences.mcpAllowNetwork = allow
+          McpServerManager.applyPreferences()
+        },
+        getValue = { DevOpsPreferences.mcpAllowNetwork },
+    )
+
+@Parcelize
 internal class McpServerStatusPreference(
     override val key: String = DevOpsPreferences.KEY_DEVOPTS_MCP_STATUS,
     override val title: Int = string.idepref_devOptions_mcp_status_title,
@@ -462,6 +477,7 @@ internal class McpAuditLogPreference(
       "read" -> context.getString(string.msg_mcp_audit_type_read)
       "write" -> context.getString(string.msg_mcp_audit_type_write)
       "build" -> context.getString(string.msg_mcp_audit_type_build)
+      "network" -> context.getString(string.msg_mcp_audit_type_network)
       else -> context.getString(string.msg_mcp_audit_type_unknown)
     }
   }

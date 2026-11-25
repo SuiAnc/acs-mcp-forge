@@ -24,6 +24,7 @@ import com.tom.rv2ide.mcp.security.PathSandbox
 import com.tom.rv2ide.mcp.tools.BuildTools
 import com.tom.rv2ide.mcp.tools.DefaultMcpToolContext
 import com.tom.rv2ide.mcp.tools.FileTools
+import com.tom.rv2ide.mcp.tools.GitTools
 import com.tom.rv2ide.mcp.tools.McpTool
 import com.tom.rv2ide.mcp.tools.McpToolContext
 import com.tom.rv2ide.mcp.tools.WorkspaceTools
@@ -50,9 +51,11 @@ class McpToolRegistry(private val context: Context, private val facade: McpBuild
   private val fileTools = FileTools.all()
   private val workspaceTools = WorkspaceTools(context, facade).all()
   private val buildTools = BuildTools(facade).all()
+  private val gitTools = GitTools().all()
   private val fileEvents = McpFileEvents(context)
 
-  override fun availableTools(): List<McpTool> = fileTools + workspaceTools + buildTools
+  override fun availableTools(): List<McpTool> =
+      fileTools + workspaceTools + buildTools + gitTools
 
   override fun contextFor(tool: McpTool): McpToolContext {
     return DefaultMcpToolContext(

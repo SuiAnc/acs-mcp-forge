@@ -17,6 +17,7 @@
 package com.tom.rv2ide.git
 
 import org.eclipse.jgit.api.Git
+import org.eclipse.jgit.transport.RemoteRefUpdate
 import org.eclipse.jgit.api.Status
 import org.eclipse.jgit.diff.DiffEntry
 import org.eclipse.jgit.lib.Constants
@@ -548,6 +549,7 @@ class GitManager(private val projectPath: String) {
             false
         }
     }
+
 
 }
 

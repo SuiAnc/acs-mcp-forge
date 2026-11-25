@@ -29,6 +29,8 @@ enum class McpPermission {
   WRITE,
   /** Requires the "allow builds" switch. */
   BUILD,
+  /** Requires the "allow network operations" switch (git fetch/pull/push). */
+  NETWORK,
 }
 
 /** Result of a tool invocation. */

@@ -35,6 +35,7 @@ object DevOpsPreferences {
   const val KEY_DEVOPTS_MCP_ALLOW_REMOTE = "${KEY_DEVOPTS_MCP}.allowRemote"
   const val KEY_DEVOPTS_MCP_ALLOW_WRITE = "${KEY_DEVOPTS_MCP}.allowWrite"
   const val KEY_DEVOPTS_MCP_ALLOW_BUILD = "${KEY_DEVOPTS_MCP}.allowBuild"
+  const val KEY_DEVOPTS_MCP_ALLOW_NETWORK = "${KEY_DEVOPTS_MCP}.allowNetwork"
   const val KEY_DEVOPTS_MCP_GENERATE_TOKEN = "${KEY_DEVOPTS_MCP}.generateToken"
   const val KEY_DEVOPTS_MCP_STATUS = "${KEY_DEVOPTS_MCP}.status"
 
@@ -104,6 +105,13 @@ object DevOpsPreferences {
     get() = prefManager.getBoolean(KEY_DEVOPTS_MCP_ALLOW_BUILD, false)
     set(value) {
       prefManager.putBoolean(KEY_DEVOPTS_MCP_ALLOW_BUILD, value)
+    }
+
+  /** Whether the MCP server exposes the network tools (git fetch/pull/push). */
+  var mcpAllowNetwork: Boolean
+    get() = prefManager.getBoolean(KEY_DEVOPTS_MCP_ALLOW_NETWORK, false)
+    set(value) {
+      prefManager.putBoolean(KEY_DEVOPTS_MCP_ALLOW_NETWORK, value)
     }
 
   const val DEFAULT_MCP_HOST = "127.0.0.1"
