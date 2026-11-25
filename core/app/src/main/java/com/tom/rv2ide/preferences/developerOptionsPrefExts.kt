@@ -17,12 +17,15 @@
 
 package com.tom.rv2ide.preferences
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.text.InputType
 import android.net.Uri
 import android.provider.Settings
 import android.widget.Toast
 import androidx.preference.Preference
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputLayout
 import com.tom.rv2ide.R
 import com.tom.rv2ide.mcp.McpServerManager
@@ -129,7 +132,9 @@ internal class McpServerScreen(
     addPreference(McpServerHostPreference())
     addPreference(McpServerPortPreference())
     addPreference(McpServerTokenPreference())
+    addPreference(McpTokenVisiblePreference())
     addPreference(McpGenerateTokenPreference())
+    addPreference(McpCopyTokenPreference())
     addPreference(McpAllowRemotePreference())
     addPreference(McpAllowWritePreference())
     addPreference(McpAllowBuildPreference())
@@ -200,7 +205,12 @@ internal class McpServerTokenPreference(
   override fun onConfigureTextInput(input: TextInputLayout) {
     input.editText?.apply {
       inputType =
-          InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+          InputType.TYPE_CLASS_TEXT or
+              if (DevOpsPreferences.mcpTokenVisible) {
+                InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+              } else {
+                InputType.TYPE_TEXT_VARIATION_PASSWORD
+              }
       setText(DevOpsPreferences.mcpToken)
     }
   }
@@ -220,16 +230,66 @@ internal class McpGenerateTokenPreference(
 ) : SimplePreference() {
 
   override fun onPreferenceClick(preference: Preference): Boolean {
+    val context = preference.context
     val token = McpServerManager.generateToken()
     DevOpsPreferences.mcpToken = token
     McpServerManager.applyPreferences()
-    Toast.makeText(
-            preference.context,
-            preference.context.getString(string.msg_mcp_token_generated, token),
-            Toast.LENGTH_LONG,
-        )
+
+    copyTokenToClipboard(context, token)
+
+    // Show the token so that it can be read or selected manually. The toast is only used on
+    // Android versions which do not show the system clipboard overlay.
+    MaterialAlertDialogBuilder(context)
+        .setTitle(string.idepref_devOptions_mcp_token_dialog_title)
+        .setMessage(token)
+        .setPositiveButton(android.R.string.ok, null)
         .show()
+
+    if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S) {
+      Toast.makeText(context, string.msg_mcp_token_copied, Toast.LENGTH_SHORT).show()
+    }
     return true
+  }
+}
+
+/** Switches the access token field between masked and plain text. */
+@Parcelize
+internal class McpTokenVisiblePreference(
+    override val key: String = DevOpsPreferences.KEY_DEVOPTS_MCP_TOKEN_VISIBLE,
+    override val title: Int = string.idepref_devOptions_mcp_token_visible_title,
+    override val summary: Int? = string.idepref_devOptions_mcp_token_visible_summary,
+) :
+    SwitchPreference(
+        setValue = { visible -> DevOpsPreferences.mcpTokenVisible = visible },
+        getValue = { DevOpsPreferences.mcpTokenVisible },
+    )
+
+/** Copies the already stored access token to the clipboard. */
+@Parcelize
+internal class McpCopyTokenPreference(
+    override val key: String = "ide.prefs.developerOptions.mcp.copyToken",
+    override val title: Int = string.idepref_devOptions_mcp_token_copy_title,
+    override val summary: Int? = string.idepref_devOptions_mcp_token_copy_summary,
+) : IPreference() {
+
+  override fun onCreateView(context: Context): Preference {
+    val preference = Preference(context)
+    preference.key = key
+    preference.title = context.getString(title)
+    preference.summary = context.getString(string.idepref_devOptions_mcp_token_copy_summary)
+    preference.setOnPreferenceClickListener {
+      val token = DevOpsPreferences.mcpToken
+      if (token.isBlank()) {
+        Toast.makeText(context, string.msg_mcp_token_empty, Toast.LENGTH_SHORT).show()
+      } else {
+        copyTokenToClipboard(context, token)
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S) {
+          Toast.makeText(context, string.msg_mcp_token_copied, Toast.LENGTH_SHORT).show()
+        }
+      }
+      true
+    }
+    return preference
   }
 }
 
@@ -461,4 +521,13 @@ internal class KeepAliveOverlayPermissionPreference(
 /** Small helper so the preference callbacks can start the service without an Activity reference. */
 private fun prefContext(): android.content.Context {
   return com.tom.rv2ide.app.BaseApplication.getBaseInstance()
+}
+
+/** Copies [token] to the system clipboard. */
+private fun copyTokenToClipboard(context: Context, token: String) {
+  val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+      ?: return
+  clipboard.setPrimaryClip(
+      ClipData.newPlainText(context.getString(string.msg_mcp_token_clip_label), token)
+  )
 }

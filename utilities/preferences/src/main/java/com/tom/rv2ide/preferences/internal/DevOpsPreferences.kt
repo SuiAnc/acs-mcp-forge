@@ -31,6 +31,7 @@ object DevOpsPreferences {
   const val KEY_DEVOPTS_MCP_HOST = "${KEY_DEVOPTS_MCP}.host"
   const val KEY_DEVOPTS_MCP_PORT = "${KEY_DEVOPTS_MCP}.port"
   const val KEY_DEVOPTS_MCP_TOKEN = "${KEY_DEVOPTS_MCP}.token"
+  const val KEY_DEVOPTS_MCP_TOKEN_VISIBLE = "${KEY_DEVOPTS_MCP}.tokenVisible"
   const val KEY_DEVOPTS_MCP_ALLOW_REMOTE = "${KEY_DEVOPTS_MCP}.allowRemote"
   const val KEY_DEVOPTS_MCP_ALLOW_WRITE = "${KEY_DEVOPTS_MCP}.allowWrite"
   const val KEY_DEVOPTS_MCP_ALLOW_BUILD = "${KEY_DEVOPTS_MCP}.allowBuild"
@@ -75,6 +76,13 @@ object DevOpsPreferences {
     get() = prefManager.getString(KEY_DEVOPTS_MCP_TOKEN, "") ?: ""
     set(value) {
       prefManager.putString(KEY_DEVOPTS_MCP_TOKEN, value.trim())
+    }
+
+  /** Whether the access token is shown as plain text instead of a masked field. */
+  var mcpTokenVisible: Boolean
+    get() = prefManager.getBoolean(KEY_DEVOPTS_MCP_TOKEN_VISIBLE, false)
+    set(value) {
+      prefManager.putBoolean(KEY_DEVOPTS_MCP_TOKEN_VISIBLE, value)
     }
 
   /** Whether the MCP server may be bound to a non-loopback address. */

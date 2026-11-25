@@ -1006,6 +1006,14 @@
   <string name="idepref_devOptions_mcp_allow_build_title">允许执行构建</string>
   <string name="idepref_devOptions_mcp_allow_build_summary">允许客户端启动和取消 Gradle 构建</string>
   <string name="idepref_devOptions_mcp_status_title">服务器状态</string>
+  <string name="idepref_devOptions_mcp_token_dialog_title">访问令牌</string>
+  <string name="idepref_devOptions_mcp_token_visible_title">显示访问令牌</string>
+  <string name="idepref_devOptions_mcp_token_visible_summary">关闭时以掩码显示；开启后明文显示（注意旁人窥屏）</string>
+  <string name="idepref_devOptions_mcp_token_copy_title">复制访问令牌</string>
+  <string name="idepref_devOptions_mcp_token_copy_summary">把当前令牌复制到剪贴板</string>
+  <string name="msg_mcp_token_clip_label">MCP 访问令牌</string>
+  <string name="msg_mcp_token_copied">令牌已复制到剪贴板</string>
+  <string name="msg_mcp_token_empty">还没有令牌，请先生成</string>
   <string name="msg_mcp_token_generated">新令牌：%1$s</string>
   <string name="idepref_devOptions_mcp_audit_title">查看审计日志</string>
   <string name="idepref_devOptions_mcp_audit_summary">MCP 客户端最近的工具调用记录</string>

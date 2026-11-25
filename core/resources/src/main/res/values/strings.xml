@@ -1044,6 +1044,14 @@ This AI agent is designed to assist you in developing Android applications direc
   <string name="idepref_devOptions_mcp_allow_build_title">Allow builds</string>
   <string name="idepref_devOptions_mcp_allow_build_summary">Let clients start and cancel Gradle builds</string>
   <string name="idepref_devOptions_mcp_status_title">Server status</string>
+  <string name="idepref_devOptions_mcp_token_dialog_title">Access token</string>
+  <string name="idepref_devOptions_mcp_token_visible_title">Show access token</string>
+  <string name="idepref_devOptions_mcp_token_visible_summary">When off the token is masked; turn on to display it in plain text (mind onlookers)</string>
+  <string name="idepref_devOptions_mcp_token_copy_title">Copy access token</string>
+  <string name="idepref_devOptions_mcp_token_copy_summary">Copy the current token to the clipboard</string>
+  <string name="msg_mcp_token_clip_label">MCP access token</string>
+  <string name="msg_mcp_token_copied">Token copied to clipboard</string>
+  <string name="msg_mcp_token_empty">No token yet, generate one first</string>
   <string name="msg_mcp_token_generated">New token: %1$s</string>
   <string name="idepref_devOptions_mcp_audit_title">View audit log</string>
   <string name="idepref_devOptions_mcp_audit_summary">Recent tool invocations from MCP clients</string>
